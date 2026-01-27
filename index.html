@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Combined Dashboard</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+  <header class="page-header">
+    <div>
+      <h1>Combined Dashboard</h1>
+      <p class="subtitle">Interactive view of Sheet1 data from Combined.xlsx</p>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="status" id="statusArea">
+      <div class="loading" id="loadingIndicator">Loading Excel data…</div>
+      <div class="error" id="errorMessage" role="alert" aria-live="polite"></div>
+    </section>
+
+    <section class="summary" aria-label="Summary">
+      <h2>Summary</h2>
+      <div class="summary-grid">
+        <div class="summary-card">
+          <span class="summary-label">Total records</span>
+          <span class="summary-value" id="totalRecords">0</span>
+        </div>
+        <div class="summary-card">
+          <span class="summary-label">Total columns</span>
+          <span class="summary-value" id="totalColumns">0</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="controls">
+      <div class="control-row">
+        <label class="control">
+          <span>Search</span>
+          <input type="search" id="globalSearch" placeholder="Search all columns" />
+        </label>
+        <label class="control">
+          <span>Rows per page</span>
+          <select id="rowsPerPage">
+            <option value="10">10</option>
+            <option value="25">25</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+          </select>
+        </label>
+        <button class="button secondary" id="resetFilters">Reset filters</button>
+      </div>
+    </section>
+
+    <section class="filters" aria-label="Filters">
+      <h2>Filters</h2>
+      <p class="section-note">Each filter supports multiple selections.</p>
+      <div class="filters-grid" id="filtersContainer"></div>
+    </section>
+
+    <section class="column-visibility" aria-label="Column visibility">
+      <h2>Show/Hide Columns</h2>
+      <div class="column-grid" id="columnToggleContainer"></div>
+    </section>
+
+    <section class="table-section" aria-label="Data table">
+      <div class="table-wrapper">
+        <table id="dataTable">
+          <thead></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="pagination" id="paginationControls"></div>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
