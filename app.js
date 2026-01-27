@@ -116,18 +116,7 @@ const loadData = async () => {
 
 const buildFilters = () => {
   elements.filters.innerHTML = "";
-  const filterColumns = state.columns.filter((col) => {
-    const values = state.rawData
-      .map((row) => row[col.code].value)
-      .filter((value) => value !== null && value !== undefined && value !== "");
-    if (values.length === 0) {
-      return false;
-    }
-    const numericShare =
-      values.filter((value) => toNumber(value) !== null).length / values.length;
-    const uniqueCount = new Set(values.map((value) => String(value))).size;
-    return numericShare < 0.5 && uniqueCount <= 50;
-  });
+  const filterColumns = getCategoricalColumns({ maxUnique: 50 });
 
   filterColumns.forEach((col) => {
     const values = Array.from(
@@ -175,6 +164,21 @@ const getFilteredData = () => {
       }
       return selected.includes(String(value));
     });
+  });
+};
+
+const getCategoricalColumns = ({ maxUnique = 50 } = {}) => {
+  return state.columns.filter((col) => {
+    const values = state.rawData
+      .map((row) => row[col.code].value)
+      .filter((value) => value !== null && value !== undefined && value !== "");
+    if (values.length === 0) {
+      return false;
+    }
+    const numericShare =
+      values.filter((value) => toNumber(value) !== null).length / values.length;
+    const uniqueCount = new Set(values.map((value) => String(value))).size;
+    return numericShare < 0.5 && uniqueCount <= maxUnique && uniqueCount > 1;
   });
 };
 
@@ -239,15 +243,8 @@ const updateKpis = (filteredData) => {
 
 const buildPivotRows = (filteredData) => {
   const numericColumns = getNumericColumns();
-  const groupColumn =
-    state.columns.find((col) => {
-      const values = state.rawData
-        .map((row) => row[col.code].value)
-        .filter((value) => value !== null && value !== undefined && value !== "");
-      const numericShare =
-        values.filter((value) => toNumber(value) !== null).length / values.length;
-      return numericShare < 0.5;
-    }) || state.columns[0];
+  const categoricalColumns = getCategoricalColumns();
+  const groupColumn = categoricalColumns[0] || state.columns[0];
 
   const groups = new Map();
   filteredData.forEach((row) => {
@@ -285,7 +282,15 @@ const renderTable = ({ groupColumn, numericColumns, rows }) => {
       if (key === "count") {
         return row.count;
       }
-      return row.sums[key] || 0;
+      if (key.startsWith("sum:")) {
+        const code = key.split(":")[1];
+        return row.sums[code] || 0;
+      }
+      if (key.startsWith("avg:")) {
+        const code = key.split(":")[1];
+        return row.count ? (row.sums[code] || 0) / row.count : 0;
+      }
+      return 0;
     };
     displayRows = displayRows.sort((a, b) => {
       const valueA = getSortValue(a);
@@ -309,10 +314,10 @@ const renderTable = ({ groupColumn, numericColumns, rows }) => {
   const headerCells = [
     { key: "label", label: groupColumn.name },
     { key: "count", label: "Rows" },
-    ...numericColumns.map((col) => ({
-      key: col.code,
-      label: `${col.name} Sum`,
-    })),
+    ...numericColumns.flatMap((col) => [
+      { key: `sum:${col.code}`, label: `${col.name} Sum` },
+      { key: `avg:${col.code}`, label: `${col.name} Avg` },
+    ]),
   ];
 
   headerCells.forEach((cell) => {
@@ -346,6 +351,10 @@ const renderTable = ({ groupColumn, numericColumns, rows }) => {
       const sumCell = document.createElement("td");
       sumCell.textContent = formatNumber(row.sums[col.code] || 0, "currency");
       tr.appendChild(sumCell);
+      const avgCell = document.createElement("td");
+      const avgValue = row.count ? (row.sums[col.code] || 0) / row.count : null;
+      avgCell.textContent = formatNumber(avgValue, "currency");
+      tr.appendChild(avgCell);
     });
     elements.summaryBody.appendChild(tr);
   });
