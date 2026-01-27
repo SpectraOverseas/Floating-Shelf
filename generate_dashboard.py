@@ -1,10 +1,27 @@
-<!DOCTYPE html>
-<html lang="en">
+"""Generate the Floating-Shelf dashboard HTML from Combined.xlsx."""
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+try:
+    import pandas as pd
+except ImportError as exc:  # pragma: no cover
+    raise SystemExit(
+        "pandas is required. Install dependencies with: pip install pandas openpyxl"
+    ) from exc
+
+REPO_ROOT = Path(__file__).resolve().parent
+EXCEL_PATH = REPO_ROOT / "Combined.xlsx"
+OUTPUT_PATH = REPO_ROOT / "index.html"
+
+HTML_TEMPLATE = """<!DOCTYPE html>
+<html lang=\"en\">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset=\"UTF-8\" />
+  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />
   <title>Floating-Shelf Dashboard</title>
-  <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+  <link rel=\"preconnect\" href=\"https://cdn.jsdelivr.net\" />
   <style>
     :root {
       color-scheme: light;
@@ -22,7 +39,7 @@
 
     body {
       margin: 0;
-      font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+      font-family: \"Inter\", \"Segoe UI\", system-ui, sans-serif;
       background: var(--bg);
       color: var(--text);
     }
@@ -174,18 +191,18 @@
   </header>
 
   <main>
-    <div class="status" id="status">Loading Combined.xlsx and building the dashboard…</div>
-    <section class="dashboard" id="dashboard"></section>
+    <div class=\"status\" id=\"status\">Loading Combined.xlsx and building the dashboard…</div>
+    <section class=\"dashboard\" id=\"dashboard\"></section>
   </main>
 
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src=\"https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js\"></script>
   <script>
-    window.__PIVOT_DATA__ = null;
+    window.__PIVOT_DATA__ = __EMBEDDED_DATA__;
 
-    const statusEl = document.getElementById("status");
-    const dashboardEl = document.getElementById("dashboard");
+    const statusEl = document.getElementById(\"status\");
+    const dashboardEl = document.getElementById(\"dashboard\");
 
-    const isBlank = (value) => value === null || value === undefined || String(value).trim() === "";
+    const isBlank = (value) => value === null || value === undefined || String(value).trim() === \"\";
     const isRowBlank = (row) => row.every(isBlank);
 
     function normalizeHeader(value, index) {
@@ -224,7 +241,7 @@
         const rowsData = dataRows.map((row) => {
           const record = {};
           columns.forEach((col, colIndex) => {
-            record[col] = row[colIndex] ?? "";
+            record[col] = row[colIndex] ?? \"\";
           });
           return record;
         });
@@ -259,8 +276,8 @@
       table.rows.forEach((row) => {
         table.columns.forEach((col) => {
           const value = row[col];
-          const number = typeof value === "number" ? value : Number(value);
-          if (!Number.isNaN(number) && value !== "") {
+          const number = typeof value === \"number\" ? value : Number(value);
+          if (!Number.isNaN(number) && value !== \"\") {
             numericCellCount += 1;
             numericSum += number;
           }
@@ -268,37 +285,37 @@
       });
 
       return [
-        { label: "Rows", value: rowCount.toLocaleString() },
-        { label: "Columns", value: columnCount.toLocaleString() },
-        { label: "Numeric Sum", value: numericSum.toLocaleString(undefined, { maximumFractionDigits: 2 }) },
-        { label: "Numeric Cells", value: numericCellCount.toLocaleString() },
+        { label: \"Rows\", value: rowCount.toLocaleString() },
+        { label: \"Columns\", value: columnCount.toLocaleString() },
+        { label: \"Numeric Sum\", value: numericSum.toLocaleString(undefined, { maximumFractionDigits: 2 }) },
+        { label: \"Numeric Cells\", value: numericCellCount.toLocaleString() },
       ];
     }
 
     function renderFilters(table, onChange) {
-      const filtersEl = document.createElement("div");
-      filtersEl.className = "filters";
+      const filtersEl = document.createElement(\"div\");
+      filtersEl.className = \"filters\";
       const selections = {};
 
       table.columns.forEach((column) => {
-        const filterEl = document.createElement("label");
-        filterEl.className = "filter";
+        const filterEl = document.createElement(\"label\");
+        filterEl.className = \"filter\";
         filterEl.textContent = column;
 
-        const selectEl = document.createElement("select");
+        const selectEl = document.createElement(\"select\");
         const values = Array.from(
           new Set(table.rows.map((row) => row[column]).filter((value) => !isBlank(value)))
         ).sort((a, b) => String(a).localeCompare(String(b)));
 
-        const options = ["All", ...values];
+        const options = [\"All\", ...values];
         options.forEach((value) => {
-          const optionEl = document.createElement("option");
+          const optionEl = document.createElement(\"option\");
           optionEl.value = value;
           optionEl.textContent = value;
           selectEl.appendChild(optionEl);
         });
 
-        selectEl.addEventListener("change", (event) => {
+        selectEl.addEventListener(\"change\", (event) => {
           selections[column] = event.target.value;
           onChange(selections);
         });
@@ -311,25 +328,25 @@
     }
 
     function renderTableRows(tableEl, columns, rows) {
-      const tbody = tableEl.querySelector("tbody");
-      tbody.innerHTML = "";
+      const tbody = tableEl.querySelector(\"tbody\");
+      tbody.innerHTML = \"\";
 
       if (!rows.length) {
-        const emptyRow = document.createElement("tr");
-        const emptyCell = document.createElement("td");
+        const emptyRow = document.createElement(\"tr\");
+        const emptyCell = document.createElement(\"td\");
         emptyCell.colSpan = columns.length;
-        emptyCell.className = "empty";
-        emptyCell.textContent = "No data matches the selected filters.";
+        emptyCell.className = \"empty\";
+        emptyCell.textContent = \"No data matches the selected filters.\";
         emptyRow.appendChild(emptyCell);
         tbody.appendChild(emptyRow);
         return;
       }
 
       rows.forEach((row) => {
-        const tr = document.createElement("tr");
+        const tr = document.createElement(\"tr\");
         columns.forEach((column) => {
-          const td = document.createElement("td");
-          td.textContent = row[column] ?? "";
+          const td = document.createElement(\"td\");
+          td.textContent = row[column] ?? \"\";
           tr.appendChild(td);
         });
         tbody.appendChild(tr);
@@ -337,43 +354,43 @@
     }
 
     function buildTableBlock(table) {
-      const block = document.createElement("article");
-      block.className = "table-block";
+      const block = document.createElement(\"article\");
+      block.className = \"table-block\";
 
-      const title = document.createElement("h2");
+      const title = document.createElement(\"h2\");
       title.textContent = table.title;
       block.appendChild(title);
 
-      const kpiGrid = document.createElement("div");
-      kpiGrid.className = "kpi-grid";
+      const kpiGrid = document.createElement(\"div\");
+      kpiGrid.className = \"kpi-grid\";
       computeKpis(table).forEach((kpi) => {
-        const kpiCard = document.createElement("div");
-        kpiCard.className = "kpi";
-        kpiCard.innerHTML = `<div class="label">${kpi.label}</div><div class="value">${kpi.value}</div>`;
+        const kpiCard = document.createElement(\"div\");
+        kpiCard.className = \"kpi\";
+        kpiCard.innerHTML = `<div class=\"label\">${kpi.label}</div><div class=\"value\">${kpi.value}</div>`;
         kpiGrid.appendChild(kpiCard);
       });
       block.appendChild(kpiGrid);
 
-      const tableContainer = document.createElement("div");
-      tableContainer.className = "table-container";
+      const tableContainer = document.createElement(\"div\");
+      tableContainer.className = \"table-container\";
 
-      const tableEl = document.createElement("table");
-      const thead = document.createElement("thead");
-      const headRow = document.createElement("tr");
+      const tableEl = document.createElement(\"table\");
+      const thead = document.createElement(\"thead\");
+      const headRow = document.createElement(\"tr\");
       table.columns.forEach((column) => {
-        const th = document.createElement("th");
+        const th = document.createElement(\"th\");
         th.textContent = column;
         headRow.appendChild(th);
       });
       thead.appendChild(headRow);
       tableEl.appendChild(thead);
-      tableEl.appendChild(document.createElement("tbody"));
+      tableEl.appendChild(document.createElement(\"tbody\"));
 
       tableContainer.appendChild(tableEl);
 
       const updateRows = (filters = {}) => {
         const filteredRows = table.rows.filter((row) =>
-          Object.entries(filters).every(([key, value]) => value === "All" || row[key] === value)
+          Object.entries(filters).every(([key, value]) => value === \"All\" || row[key] === value)
         );
         renderTableRows(tableEl, table.columns, filteredRows);
       };
@@ -386,9 +403,9 @@
     }
 
     function renderDashboard(data) {
-      dashboardEl.innerHTML = "";
+      dashboardEl.innerHTML = \"\";
       if (!data.tables || !data.tables.length) {
-        statusEl.textContent = "No pivot tables found on Sheet2.";
+        statusEl.textContent = \"No pivot tables found on Sheet2.\";
         return;
       }
 
@@ -404,15 +421,15 @@
         return window.__PIVOT_DATA__;
       }
 
-      const response = await fetch("Combined.xlsx");
+      const response = await fetch(\"Combined.xlsx\");
       if (!response.ok) {
-        throw new Error("Unable to fetch Combined.xlsx. Make sure the file is in the repository.");
+        throw new Error(\"Unable to fetch Combined.xlsx. Make sure the file is in the repository.\");
       }
       const arrayBuffer = await response.arrayBuffer();
-      const workbook = XLSX.read(arrayBuffer, { type: "array" });
-      const sheet = workbook.Sheets["Sheet2"] || workbook.Sheets[workbook.SheetNames[1]];
+      const workbook = XLSX.read(arrayBuffer, { type: \"array\" });
+      const sheet = workbook.Sheets[\"Sheet2\"] || workbook.Sheets[workbook.SheetNames[1]];
       if (!sheet) {
-        throw new Error("Sheet2 was not found in Combined.xlsx.");
+        throw new Error(\"Sheet2 was not found in Combined.xlsx.\");
       }
       const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true, blankrows: true });
       return { tables: parsePivotTables(rows) };
@@ -426,3 +443,91 @@
   </script>
 </body>
 </html>
+"""
+
+
+def _is_blank(value: object) -> bool:
+    return value is None or str(value).strip() == ""
+
+
+def _is_row_blank(row: list[object]) -> bool:
+    return all(_is_blank(cell) for cell in row)
+
+
+def _normalize_header(value: object, index: int) -> str:
+    if _is_blank(value):
+        return f"Column {index + 1}"
+    return str(value).strip()
+
+
+def _parse_tables(rows: list[list[object]]) -> list[dict[str, object]]:
+    tables: list[dict[str, object]] = []
+    block: list[list[object]] = []
+
+    def flush() -> None:
+        nonlocal block
+        if not block:
+            return
+        first_row = block[0]
+        first_row_values = [cell for cell in first_row if not _is_blank(cell)]
+        title = None
+        header_index = 0
+
+        if len(first_row_values) == 1 and all(_is_blank(cell) for cell in first_row[1:]):
+            title = str(first_row_values[0]).strip()
+            header_index = 1
+
+        header_row = block[header_index] if header_index < len(block) else []
+        columns = [_normalize_header(cell, idx) for idx, cell in enumerate(header_row)]
+        if not columns:
+            block = []
+            return
+
+        data_rows = [row for row in block[header_index + 1 :] if not _is_row_blank(row)]
+        rows_data = []
+        for row in data_rows:
+            record = {columns[idx]: row[idx] if idx < len(row) else "" for idx in range(len(columns))}
+            rows_data.append(record)
+
+        tables.append(
+            {
+                "title": title or f"Pivot Table {len(tables) + 1}",
+                "columns": columns,
+                "rows": rows_data,
+            }
+        )
+        block = []
+
+    for row in rows:
+        normalized = [cell if cell is not None else None for cell in row]
+        if _is_row_blank(normalized):
+            flush()
+        else:
+            block.append(normalized)
+
+    flush()
+    return tables
+
+
+def load_tables_from_excel(path: Path) -> list[dict[str, object]]:
+    if not path.exists():
+        raise FileNotFoundError(f"Excel file not found: {path}")
+
+    df = pd.read_excel(path, sheet_name="Sheet2", header=None, engine="openpyxl")
+    rows = df.where(pd.notnull(df), None).values.tolist()
+    return _parse_tables(rows)
+
+
+def build_html(tables: list[dict[str, object]]) -> str:
+    payload = json.dumps({"tables": tables}, ensure_ascii=False)
+    return HTML_TEMPLATE.replace("__EMBEDDED_DATA__", payload)
+
+
+def main() -> None:
+    tables = load_tables_from_excel(EXCEL_PATH)
+    OUTPUT_PATH.write_text(build_html(tables), encoding="utf-8")
+    print(f"Dashboard written to {OUTPUT_PATH}")
+
+
+if __name__ == "__main__":
+    main()
