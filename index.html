@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Floating Shelf</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      background: #f7f8fa;
+      color: #1f2933;
+    }
+    body {
+      margin: 0;
+      padding: 24px;
+    }
+    header {
+      margin-bottom: 24px;
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 2rem;
+    }
+    p {
+      margin: 0;
+      color: #52606d;
+    }
+    nav {
+      margin: 16px 0 24px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    nav a {
+      text-decoration: none;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: #e4e7eb;
+      color: #1f2933;
+      font-size: 0.9rem;
+    }
+    section {
+      margin-bottom: 32px;
+    }
+    .table-wrapper {
+      overflow-x: auto;
+      background: #fff;
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 6px 18px rgba(60, 72, 88, 0.1);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 520px;
+    }
+    th,
+    td {
+      border: 1px solid #d2d6dc;
+      padding: 8px 12px;
+      text-align: left;
+    }
+    th {
+      background: #f0f4f8;
+      font-weight: 600;
+    }
+    .status {
+      padding: 12px 16px;
+      background: #fff3c4;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      color: #7c5e10;
+      font-size: 0.95rem;
+    }
+    .footer-note {
+      margin-top: 40px;
+      font-size: 0.85rem;
+      color: #7b8794;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Floating Shelf</h1>
+    <p>Pivot tables auto-generated from <strong>Combined.xlsx</strong>.</p>
+  </header>
+
+  <div id="status" class="status">Loading pivot tables…</div>
+  <nav id="navigation" aria-label="Pivot table navigation"></nav>
+  <main id="tables"></main>
+
+  <p class="footer-note">
+    Update the <code>Combined.xlsx</code> file in this repository to refresh the dashboard.
+  </p>
+
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.19.3/dist/xlsx.full.min.js"></script>
+  <script>
+    const statusEl = document.getElementById("status");
+    const navEl = document.getElementById("navigation");
+    const tablesEl = document.getElementById("tables");
+
+    const isRowEmpty = (row) =>
+      !row || row.length === 0 || row.every((cell) => cell === null || cell === undefined || String(cell).trim() === "");
+
+    const splitIntoTables = (rows) => {
+      const tables = [];
+      let current = [];
+
+      rows.forEach((row) => {
+        if (isRowEmpty(row)) {
+          if (current.length) {
+            tables.push(current);
+            current = [];
+          }
+        } else {
+          current.push(row);
+        }
+      });
+
+      if (current.length) {
+        tables.push(current);
+      }
+
+      return tables;
+    };
+
+    const buildTableElement = (rows, index) => {
+      const section = document.createElement("section");
+      const heading = document.createElement("h2");
+      heading.textContent = `Pivot Table ${index + 1}`;
+      section.id = `pivot-table-${index + 1}`;
+      section.appendChild(heading);
+
+      const wrapper = document.createElement("div");
+      wrapper.className = "table-wrapper";
+
+      const table = document.createElement("table");
+      const thead = document.createElement("thead");
+      const tbody = document.createElement("tbody");
+
+      const [headerRow, ...bodyRows] = rows;
+
+      const headerTr = document.createElement("tr");
+      headerRow.forEach((cell) => {
+        const th = document.createElement("th");
+        th.textContent = cell ?? "";
+        headerTr.appendChild(th);
+      });
+      thead.appendChild(headerTr);
+
+      bodyRows.forEach((row) => {
+        const tr = document.createElement("tr");
+        row.forEach((cell) => {
+          const td = document.createElement("td");
+          td.textContent = cell ?? "";
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      });
+
+      table.appendChild(thead);
+      table.appendChild(tbody);
+      wrapper.appendChild(table);
+      section.appendChild(wrapper);
+      return section;
+    };
+
+    const addNavigationLink = (label, targetId) => {
+      const link = document.createElement("a");
+      link.href = `#${targetId}`;
+      link.textContent = label;
+      navEl.appendChild(link);
+    };
+
+    const renderTables = (tables) => {
+      tablesEl.innerHTML = "";
+      navEl.innerHTML = "";
+
+      if (!tables.length) {
+        statusEl.textContent = "No pivot tables were detected in Sheet2.";
+        statusEl.style.background = "#fdecea";
+        statusEl.style.color = "#9b1c1c";
+        return;
+      }
+
+      statusEl.textContent = `Loaded ${tables.length} pivot table${tables.length === 1 ? "" : "s"}.`;
+      statusEl.style.background = "#d9fbe7";
+      statusEl.style.color = "#0f5132";
+
+      tables.forEach((rows, index) => {
+        const section = buildTableElement(rows, index);
+        tablesEl.appendChild(section);
+        addNavigationLink(`Table ${index + 1}`, section.id);
+      });
+    };
+
+    const loadPivotTables = async () => {
+      try {
+        const response = await fetch("Combined.xlsx", { cache: "no-store" });
+        if (!response.ok) {
+          throw new Error(`Failed to fetch Combined.xlsx: ${response.status}`);
+        }
+
+        const data = await response.arrayBuffer();
+        const workbook = XLSX.read(data, { type: "array" });
+        const sheet = workbook.Sheets["Sheet2"];
+
+        if (!sheet) {
+          throw new Error("Sheet2 was not found in Combined.xlsx.");
+        }
+
+        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, blankrows: true, defval: "" });
+        const tables = splitIntoTables(rows).filter((table) => table.some((row) => !isRowEmpty(row)));
+        renderTables(tables);
+      } catch (error) {
+        statusEl.textContent = `Unable to load pivot tables: ${error.message}`;
+        statusEl.style.background = "#fdecea";
+        statusEl.style.color = "#9b1c1c";
+      }
+    };
+
+    loadPivotTables();
+  </script>
+</body>
+</html>
