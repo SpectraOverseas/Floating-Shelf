@@ -7,13 +7,16 @@
   <link rel="preconnect" href="https://cdn.jsdelivr.net" />
   <style>
     :root {
-      color-scheme: light;
-      --bg: #f5f7fb;
-      --card: #ffffff;
-      --text: #1b1f2a;
-      --muted: #5a6475;
-      --accent: #3b6cf4;
-      --border: #e0e6f0;
+      color-scheme: dark;
+      --bg: #0b111b;
+      --panel: #131c2b;
+      --panel-alt: #0f1725;
+      --card: #172337;
+      --text: #e8eefc;
+      --muted: #91a1be;
+      --accent: #5aa2ff;
+      --border: #22314a;
+      --shadow: 0 12px 24px rgba(5, 8, 14, 0.55);
     }
 
     * {
@@ -28,78 +31,120 @@
     }
 
     header {
-      padding: 32px 24px 16px;
-      background: var(--card);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: var(--panel);
       border-bottom: 1px solid var(--border);
+      padding: 16px 24px;
+      box-shadow: var(--shadow);
     }
 
-    header h1 {
-      margin: 0 0 8px;
-      font-size: 28px;
-      font-weight: 700;
+    .header-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
     }
 
-    header p {
+    .title-group h1 {
       margin: 0;
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    .title-group span {
       color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .search-input {
+      background: var(--panel-alt);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 12px;
+      border-radius: 8px;
+      min-width: 220px;
+      font-size: 13px;
+    }
+
+    .btn {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .btn.primary {
+      background: var(--accent);
+      color: #051023;
+      border-color: transparent;
+      font-weight: 600;
     }
 
     main {
       padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
     }
 
     .status {
-      margin-bottom: 16px;
-      padding: 12px 16px;
-      background: #eef3ff;
-      border: 1px solid #d7e3ff;
+      padding: 10px 14px;
+      background: rgba(90, 162, 255, 0.12);
+      border: 1px solid rgba(90, 162, 255, 0.4);
       border-radius: 8px;
-      color: #27408b;
-      font-size: 14px;
+      color: var(--accent);
+      font-size: 12px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
     }
 
-    .dashboard {
-      display: flex;
-      flex-direction: column;
-      gap: 24px;
-    }
-
-    .table-block {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 20px;
-      box-shadow: 0 10px 20px rgba(15, 23, 42, 0.05);
-    }
-
-    .table-block h2 {
-      margin: 0 0 12px;
-      font-size: 20px;
-    }
-
-    .kpi-grid {
+    .kpi-row {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
       gap: 12px;
-      margin-bottom: 16px;
     }
 
-    .kpi {
-      background: #f8fafc;
+    .kpi-card {
+      background: var(--card);
       border: 1px solid var(--border);
       border-radius: 10px;
       padding: 12px 14px;
+      box-shadow: var(--shadow);
     }
 
-    .kpi .label {
+    .kpi-card .label {
+      font-size: 11px;
       color: var(--muted);
-      font-size: 12px;
       text-transform: uppercase;
-      letter-spacing: 0.04em;
+      letter-spacing: 0.12em;
     }
 
-    .kpi .value {
-      font-size: 20px;
+    .kpi-card .value {
+      font-size: 18px;
       font-weight: 600;
       margin-top: 6px;
     }
@@ -108,36 +153,65 @@
       display: flex;
       flex-wrap: wrap;
       gap: 12px;
-      margin-bottom: 16px;
     }
 
     .filter {
       display: flex;
       flex-direction: column;
       gap: 6px;
-      font-size: 12px;
+      font-size: 11px;
       color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
     }
 
     .filter select {
-      min-width: 160px;
-      padding: 6px 10px;
-      border-radius: 6px;
+      min-width: 180px;
+      padding: 8px 10px;
+      border-radius: 8px;
       border: 1px solid var(--border);
-      font-size: 14px;
+      background: var(--panel-alt);
+      color: var(--text);
+      font-size: 13px;
+    }
+
+    .pivot-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 16px;
+    }
+
+    .pivot-panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      box-shadow: var(--shadow);
+      min-height: 320px;
+    }
+
+    .pivot-panel h2 {
+      margin: 0;
+      font-size: 16px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
     }
 
     .table-container {
-      overflow: auto;
       border-radius: 10px;
       border: 1px solid var(--border);
-      background: #fff;
+      background: var(--panel-alt);
+      overflow: auto;
+      max-height: 320px;
     }
 
     table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 14px;
+      font-size: 12px;
     }
 
     th,
@@ -151,7 +225,7 @@
     th {
       position: sticky;
       top: 0;
-      background: #f1f5f9;
+      background: #1a2538;
       font-weight: 600;
       z-index: 1;
     }
@@ -165,34 +239,99 @@
       padding: 16px;
       color: var(--muted);
     }
+
+    .hidden {
+      display: none;
+    }
+
+    @media (max-width: 900px) {
+      .header-bar {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .header-actions {
+        width: 100%;
+        justify-content: space-between;
+      }
+    }
   </style>
 </head>
 <body>
   <header>
-    <h1>Floating-Shelf</h1>
-    <p>Interactive dashboard of all pivot tables in <strong>Combined.xlsx</strong>.</p>
+    <div class="header-bar">
+      <div class="title-group">
+        <span>Dashboard</span>
+        <h1>Floating-Shelf</h1>
+      </div>
+      <div class="header-actions">
+        <input class="search-input" id="search" type="search" placeholder="Search across pivots" />
+        <button class="btn" id="filtersBtn" type="button">Filters</button>
+        <button class="btn" id="openBtn" type="button">Open XLSX</button>
+        <button class="btn" id="downloadBtn" type="button">Download CSV</button>
+        <button class="btn primary" type="button">Logout</button>
+      </div>
+    </div>
   </header>
 
   <main>
     <div class="status" id="status">Loading Combined.xlsx and building the dashboard…</div>
-    <section class="dashboard" id="dashboard"></section>
+    <section class="filters" id="filters"></section>
+    <section class="kpi-row" id="kpiRow"></section>
+    <section class="pivot-grid" id="pivotGrid"></section>
   </main>
+
+  <input class="hidden" id="fileInput" type="file" accept=".xlsx" />
 
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script>
-    window.__PIVOT_DATA__ = null;
-
     const statusEl = document.getElementById("status");
-    const dashboardEl = document.getElementById("dashboard");
+    const filtersEl = document.getElementById("filters");
+    const kpiRowEl = document.getElementById("kpiRow");
+    const pivotGridEl = document.getElementById("pivotGrid");
+    const searchEl = document.getElementById("search");
+    const fileInputEl = document.getElementById("fileInput");
 
     const isBlank = (value) => value === null || value === undefined || String(value).trim() === "";
     const isRowBlank = (row) => row.every(isBlank);
+    const normalizeKey = (value) => String(value || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+
+    const filterDefinitions = [
+      { id: "date", label: "Date", keys: ["date", "day", "week", "month"] },
+      { id: "store", label: "Store", keys: ["store", "storename", "account", "marketplace"] },
+      { id: "category", label: "Category", keys: ["category", "productcategory", "department"] },
+      { id: "portfolio", label: "Portfolio", keys: ["portfolio", "portfolioname"] },
+    ];
+
+    let rawData = [];
+    let rawColumns = [];
+    let pivotTables = [];
+    let filterColumns = {};
+    let filterSelections = {};
+    let searchTerm = "";
 
     function normalizeHeader(value, index) {
       if (isBlank(value)) {
         return `Column ${index + 1}`;
       }
       return String(value).trim();
+    }
+
+    function parseSheetRows(rows) {
+      const trimmed = rows.filter((row) => !isRowBlank(row));
+      if (!trimmed.length) {
+        return { columns: [], rows: [] };
+      }
+      const headers = trimmed[0].map(normalizeHeader);
+      const dataRows = trimmed.slice(1);
+      const records = dataRows.map((row) => {
+        const record = {};
+        headers.forEach((col, index) => {
+          record[col] = row[index] ?? "";
+        });
+        return record;
+      });
+      return { columns: headers, rows: records };
     }
 
     function parsePivotTables(rows) {
@@ -250,64 +389,189 @@
       return tables;
     }
 
-    function computeKpis(table) {
-      const rowCount = table.rows.length;
-      const columnCount = table.columns.length;
-      let numericCellCount = 0;
-      let numericSum = 0;
+    function detectFilterColumns(columns) {
+      const matches = {};
+      filterDefinitions.forEach((filter) => {
+        const column = columns.find((name) => filter.keys.includes(normalizeKey(name)));
+        if (column) {
+          matches[filter.id] = column;
+        }
+      });
+      return matches;
+    }
 
-      table.rows.forEach((row) => {
-        table.columns.forEach((col) => {
-          const value = row[col];
-          const number = typeof value === "number" ? value : Number(value);
-          if (!Number.isNaN(number) && value !== "") {
-            numericCellCount += 1;
-            numericSum += number;
-          }
-        });
+    function formatCurrency(value) {
+      if (value === null || value === undefined || Number.isNaN(value)) {
+        return "—";
+      }
+      return value.toLocaleString(undefined, { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+    }
+
+    function formatNumber(value) {
+      if (value === null || value === undefined || Number.isNaN(value)) {
+        return "—";
+      }
+      return value.toLocaleString();
+    }
+
+    function formatPercent(value) {
+      if (value === null || value === undefined || Number.isNaN(value)) {
+        return "—";
+      }
+      return `${(value * 100).toFixed(2)}%`;
+    }
+
+    function getMetricValue(row, possibleKeys) {
+      const match = Object.keys(row).find((key) => possibleKeys.includes(normalizeKey(key)));
+      if (!match) {
+        return 0;
+      }
+      const number = Number(row[match]);
+      return Number.isNaN(number) ? 0 : number;
+    }
+
+    function computeKpis(rows) {
+      if (!rows.length) {
+        return [
+          { label: "Total Spend", value: "—" },
+          { label: "Total Sales", value: "—" },
+          { label: "ACOS", value: "—" },
+          { label: "Clicks", value: "—" },
+          { label: "Impressions", value: "—" },
+          { label: "CTR", value: "—" },
+          { label: "ROAS", value: "—" },
+          { label: "Avg CPC", value: "—" },
+        ];
+      }
+
+      const spendKeys = ["spend", "cost", "adspend", "advertisingcost", "totalspend"];
+      const salesKeys = ["sales", "revenue", "totalsales", "orderedproductssales"];
+      const clicksKeys = ["clicks", "totalclicks"];
+      const impressionsKeys = ["impressions", "totalimpressions"];
+
+      let spend = 0;
+      let sales = 0;
+      let clicks = 0;
+      let impressions = 0;
+
+      rows.forEach((row) => {
+        spend += getMetricValue(row, spendKeys);
+        sales += getMetricValue(row, salesKeys);
+        clicks += getMetricValue(row, clicksKeys);
+        impressions += getMetricValue(row, impressionsKeys);
       });
 
+      const acos = sales ? spend / sales : null;
+      const ctr = impressions ? clicks / impressions : null;
+      const roas = spend ? sales / spend : null;
+      const avgCpc = clicks ? spend / clicks : null;
+
       return [
-        { label: "Rows", value: rowCount.toLocaleString() },
-        { label: "Columns", value: columnCount.toLocaleString() },
-        { label: "Numeric Sum", value: numericSum.toLocaleString(undefined, { maximumFractionDigits: 2 }) },
-        { label: "Numeric Cells", value: numericCellCount.toLocaleString() },
+        { label: "Total Spend", value: formatCurrency(spend) },
+        { label: "Total Sales", value: formatCurrency(sales) },
+        { label: "ACOS", value: formatPercent(acos) },
+        { label: "Clicks", value: formatNumber(clicks) },
+        { label: "Impressions", value: formatNumber(impressions) },
+        { label: "CTR", value: formatPercent(ctr) },
+        { label: "ROAS", value: roas === null ? "—" : roas.toFixed(2) },
+        { label: "Avg CPC", value: avgCpc === null ? "—" : formatCurrency(avgCpc) },
       ];
     }
 
-    function renderFilters(table, onChange) {
-      const filtersEl = document.createElement("div");
-      filtersEl.className = "filters";
-      const selections = {};
+    function applyFilters(rows) {
+      return rows.filter((row) =>
+        Object.entries(filterSelections).every(([filterId, value]) => {
+          if (!value || value === "All") {
+            return true;
+          }
+          const columnName = filterColumns[filterId];
+          if (!columnName) {
+            return true;
+          }
+          const rowValue = row[columnName];
+          return String(rowValue ?? "").trim() === value;
+        })
+      );
+    }
 
-      table.columns.forEach((column) => {
+    function applyFiltersToPivot(table) {
+      const columnLookup = table.columns.reduce((acc, col) => {
+        acc[normalizeKey(col)] = col;
+        return acc;
+      }, {});
+
+      return table.rows.filter((row) => {
+        const matchesFilters = Object.entries(filterSelections).every(([filterId, value]) => {
+          if (!value || value === "All") {
+            return true;
+          }
+          const sourceColumn = filterColumns[filterId];
+          if (!sourceColumn) {
+            return true;
+          }
+          const pivotColumn = columnLookup[normalizeKey(sourceColumn)];
+          if (!pivotColumn) {
+            return true;
+          }
+          return String(row[pivotColumn] ?? "").trim() === value;
+        });
+
+        if (!matchesFilters) {
+          return false;
+        }
+
+        if (!searchTerm) {
+          return true;
+        }
+
+        const needle = searchTerm.toLowerCase();
+        return table.columns.some((col) => String(row[col] ?? "").toLowerCase().includes(needle));
+      });
+    }
+
+    function renderFilters() {
+      filtersEl.innerHTML = "";
+      filterDefinitions.forEach((filter) => {
+        const column = filterColumns[filter.id];
+        if (!column) {
+          return;
+        }
+
         const filterEl = document.createElement("label");
         filterEl.className = "filter";
-        filterEl.textContent = column;
+        filterEl.textContent = filter.label;
 
         const selectEl = document.createElement("select");
         const values = Array.from(
-          new Set(table.rows.map((row) => row[column]).filter((value) => !isBlank(value)))
-        ).sort((a, b) => String(a).localeCompare(String(b)));
+          new Set(rawData.map((row) => row[column]).filter((value) => !isBlank(value)).map((value) => String(value)))
+        ).sort((a, b) => a.localeCompare(b));
 
-        const options = ["All", ...values];
-        options.forEach((value) => {
+        ["All", ...values].forEach((value) => {
           const optionEl = document.createElement("option");
           optionEl.value = value;
           optionEl.textContent = value;
           selectEl.appendChild(optionEl);
         });
 
+        selectEl.value = filterSelections[filter.id] || "All";
         selectEl.addEventListener("change", (event) => {
-          selections[column] = event.target.value;
-          onChange(selections);
+          filterSelections[filter.id] = event.target.value;
+          updateDashboard();
         });
 
         filterEl.appendChild(selectEl);
         filtersEl.appendChild(filterEl);
       });
+    }
 
-      return filtersEl;
+    function renderKpis(rows) {
+      kpiRowEl.innerHTML = "";
+      computeKpis(rows).forEach((kpi) => {
+        const card = document.createElement("div");
+        card.className = "kpi-card";
+        card.innerHTML = `<div class="label">${kpi.label}</div><div class="value">${kpi.value}</div>`;
+        kpiRowEl.appendChild(card);
+      });
     }
 
     function renderTableRows(tableEl, columns, rows) {
@@ -336,23 +600,13 @@
       });
     }
 
-    function buildTableBlock(table) {
-      const block = document.createElement("article");
-      block.className = "table-block";
+    function buildPivotPanel(table, filteredRows) {
+      const panel = document.createElement("article");
+      panel.className = "pivot-panel";
 
       const title = document.createElement("h2");
       title.textContent = table.title;
-      block.appendChild(title);
-
-      const kpiGrid = document.createElement("div");
-      kpiGrid.className = "kpi-grid";
-      computeKpis(table).forEach((kpi) => {
-        const kpiCard = document.createElement("div");
-        kpiCard.className = "kpi";
-        kpiCard.innerHTML = `<div class="label">${kpi.label}</div><div class="value">${kpi.value}</div>`;
-        kpiGrid.appendChild(kpiCard);
-      });
-      block.appendChild(kpiGrid);
+      panel.appendChild(title);
 
       const tableContainer = document.createElement("div");
       tableContainer.className = "table-container";
@@ -370,56 +624,111 @@
       tableEl.appendChild(document.createElement("tbody"));
 
       tableContainer.appendChild(tableEl);
+      panel.appendChild(tableContainer);
 
-      const updateRows = (filters = {}) => {
-        const filteredRows = table.rows.filter((row) =>
-          Object.entries(filters).every(([key, value]) => value === "All" || row[key] === value)
-        );
-        renderTableRows(tableEl, table.columns, filteredRows);
-      };
-
-      block.appendChild(renderFilters(table, updateRows));
-      block.appendChild(tableContainer);
-      updateRows();
-
-      return block;
+      renderTableRows(tableEl, table.columns, filteredRows);
+      return panel;
     }
 
-    function renderDashboard(data) {
-      dashboardEl.innerHTML = "";
-      if (!data.tables || !data.tables.length) {
-        statusEl.textContent = "No pivot tables found on Sheet2.";
-        return;
-      }
+    function updateDashboard() {
+      const filteredRaw = applyFilters(rawData);
+      renderFilters();
+      renderKpis(filteredRaw);
 
-      data.tables.forEach((table) => {
-        dashboardEl.appendChild(buildTableBlock(table));
+      pivotGridEl.innerHTML = "";
+      pivotTables.forEach((table) => {
+        const filteredRows = applyFiltersToPivot(table);
+        pivotGridEl.appendChild(buildPivotPanel(table, filteredRows));
       });
 
-      statusEl.textContent = `Loaded ${data.tables.length} pivot table(s) from Sheet2.`;
+      statusEl.textContent = `Loaded ${pivotTables.length} pivot table(s). Showing ${filteredRaw.length.toLocaleString()} records from Sheet1.`;
     }
 
-    async function loadWorkbook() {
-      if (window.__PIVOT_DATA__ && window.__PIVOT_DATA__.tables) {
-        return window.__PIVOT_DATA__;
+    async function loadWorkbook(arrayBuffer) {
+      const workbook = XLSX.read(arrayBuffer, { type: "array" });
+      const sheet1 = workbook.Sheets["Sheet1"] || workbook.Sheets[workbook.SheetNames[0]];
+      const sheet2 = workbook.Sheets["Sheet2"] || workbook.Sheets[workbook.SheetNames[1]];
+
+      if (!sheet1) {
+        throw new Error("Sheet1 was not found in Combined.xlsx.");
+      }
+      if (!sheet2) {
+        throw new Error("Sheet2 was not found in Combined.xlsx.");
       }
 
+      const rawRows = XLSX.utils.sheet_to_json(sheet1, { header: 1, raw: true, blankrows: true });
+      const pivotRows = XLSX.utils.sheet_to_json(sheet2, { header: 1, raw: true, blankrows: true });
+
+      const parsedRaw = parseSheetRows(rawRows);
+      rawColumns = parsedRaw.columns;
+      rawData = parsedRaw.rows;
+      filterColumns = detectFilterColumns(rawColumns);
+      filterSelections = {};
+
+      pivotTables = parsePivotTables(pivotRows);
+
+      if (!pivotTables.length) {
+        statusEl.textContent = "No pivot tables found on Sheet2.";
+      }
+
+      updateDashboard();
+    }
+
+    async function fetchWorkbook() {
       const response = await fetch("Combined.xlsx");
       if (!response.ok) {
         throw new Error("Unable to fetch Combined.xlsx. Make sure the file is in the repository.");
       }
-      const arrayBuffer = await response.arrayBuffer();
-      const workbook = XLSX.read(arrayBuffer, { type: "array" });
-      const sheet = workbook.Sheets["Sheet2"] || workbook.Sheets[workbook.SheetNames[1]];
-      if (!sheet) {
-        throw new Error("Sheet2 was not found in Combined.xlsx.");
-      }
-      const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true, blankrows: true });
-      return { tables: parsePivotTables(rows) };
+      return response.arrayBuffer();
     }
 
-    loadWorkbook()
-      .then(renderDashboard)
+    document.getElementById("filtersBtn").addEventListener("click", () => {
+      filtersEl.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+
+    document.getElementById("openBtn").addEventListener("click", () => {
+      fileInputEl.value = "";
+      fileInputEl.click();
+    });
+
+    fileInputEl.addEventListener("change", async (event) => {
+      const file = event.target.files[0];
+      if (!file) {
+        return;
+      }
+      const buffer = await file.arrayBuffer();
+      loadWorkbook(buffer).catch((error) => {
+        statusEl.textContent = error.message;
+      });
+    });
+
+    document.getElementById("downloadBtn").addEventListener("click", () => {
+      const filteredRaw = applyFilters(rawData);
+      if (!filteredRaw.length) {
+        return;
+      }
+      const worksheet = XLSX.utils.json_to_sheet(filteredRaw);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "FilteredData");
+      const csv = XLSX.write(workbook, { bookType: "csv", type: "array" });
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "floating-shelf-filtered.csv";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    });
+
+    searchEl.addEventListener("input", (event) => {
+      searchTerm = event.target.value.trim();
+      updateDashboard();
+    });
+
+    fetchWorkbook()
+      .then(loadWorkbook)
       .catch((error) => {
         statusEl.textContent = error.message;
       });
