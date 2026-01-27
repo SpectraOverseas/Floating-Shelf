@@ -3,549 +3,82 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Floating-Shelf Dashboard</title>
+  <title>Combined Dashboard</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <style>
-    :root {
-      --bg: #f4f6fb;
-      --panel: #ffffff;
-      --text: #1f2a44;
-      --muted: #6c778d;
-      --primary: #2f5aff;
-      --border: #d7ddea;
-      --shadow: 0 10px 30px rgba(31, 42, 68, 0.08);
-    }
-
-    * {
-      box-sizing: border-box;
-    }
-
-    body {
-      margin: 0;
-      font-family: "Inter", sans-serif;
-      background: var(--bg);
-      color: var(--text);
-    }
-
-    .dashboard {
-      max-width: 1400px;
-      margin: 0 auto;
-      padding: 32px 24px 64px;
-    }
-
-    .header {
-      display: flex;
-      align-items: flex-end;
-      justify-content: space-between;
-      margin-bottom: 24px;
-    }
-
-    .header h1 {
-      font-size: 32px;
-      margin: 0;
-      font-weight: 700;
-    }
-
-    .header p {
-      margin: 6px 0 0;
-      color: var(--muted);
-    }
-
-    .filter-panel {
-      background: var(--panel);
-      padding: 18px 20px;
-      border-radius: 18px;
-      box-shadow: var(--shadow);
-      border: 1px solid var(--border);
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-      margin-bottom: 24px;
-    }
-
-    .filter-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .filter-header h2 {
-      font-size: 18px;
-      margin: 0;
-      font-weight: 600;
-    }
-
-    .reset-btn {
-      background: #f1f4ff;
-      color: var(--primary);
-      border: 1px solid #d9e0ff;
-      border-radius: 10px;
-      padding: 8px 16px;
-      font-weight: 600;
-      cursor: pointer;
-    }
-
-    .filters {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 12px;
-    }
-
-    .filter-box {
-      position: relative;
-      background: #f8f9ff;
-      border: 1px solid #dfe4f5;
-      border-radius: 12px;
-      padding: 12px 12px 10px;
-      cursor: pointer;
-      transition: border-color 0.2s ease, box-shadow 0.2s ease;
-    }
-
-    .filter-box.active {
-      border-color: var(--primary);
-      box-shadow: 0 6px 18px rgba(47, 90, 255, 0.12);
-    }
-
-    .filter-label {
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      color: var(--muted);
-      font-weight: 600;
-      margin-bottom: 6px;
-    }
-
-    .filter-selected {
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--text);
-      min-height: 20px;
-    }
-
-    .filter-dropdown {
-      position: absolute;
-      left: 0;
-      right: 0;
-      top: calc(100% + 8px);
-      background: #fff;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      box-shadow: var(--shadow);
-      max-height: 240px;
-      overflow: auto;
-      padding: 10px 12px;
-      display: none;
-      z-index: 10;
-    }
-
-    .filter-box.active .filter-dropdown {
-      display: block;
-    }
-
-    .filter-option {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 6px 4px;
-      font-size: 14px;
-    }
-
-    .filter-option input {
-      accent-color: var(--primary);
-    }
-
-    .kpi-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 16px;
-      margin-bottom: 24px;
-    }
-
-    .kpi-card {
-      background: var(--panel);
-      border-radius: 16px;
-      padding: 18px 20px;
-      border: 1px solid var(--border);
-      box-shadow: var(--shadow);
-    }
-
-    .kpi-title {
-      color: var(--muted);
-      font-size: 13px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      margin-bottom: 8px;
-    }
-
-    .kpi-value {
-      font-size: 26px;
-      font-weight: 700;
-    }
-
-    .tables {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-      gap: 20px;
-    }
-
-    .table-card {
-      background: var(--panel);
-      border-radius: 16px;
-      padding: 18px 20px 16px;
-      border: 1px solid var(--border);
-      box-shadow: var(--shadow);
-    }
-
-    .table-card h3 {
-      margin: 0 0 12px;
-      font-size: 16px;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 13px;
-    }
-
-    th, td {
-      text-align: left;
-      padding: 8px 6px;
-      border-bottom: 1px solid #e8ebf5;
-    }
-
-    th {
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: var(--muted);
-    }
-
-    .muted {
-      color: var(--muted);
-    }
-
-    @media (max-width: 768px) {
-      .header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 8px;
-      }
-
-      .filters {
-        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-      }
-    }
-  </style>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="dashboard">
-    <header class="header">
+  <div class="app">
+    <header class="app__header">
       <div>
-        <h1>Floating-Shelf</h1>
-        <p>GitHub Pages dashboard powered by Combined.xlsx</p>
+        <p class="eyebrow">GitHub Pages Excel Dashboard</p>
+        <h1>Combined Dashboard</h1>
       </div>
+      <button class="button button--ghost" id="resetFilters" type="button">Reset Filters</button>
     </header>
 
-    <section class="filter-panel">
-      <div class="filter-header">
-        <h2>Filter Selection</h2>
-        <button class="reset-btn" type="button" id="resetFilters">Reset Filters</button>
+    <section class="summary" aria-live="polite">
+      <div class="summary__card">
+        <p class="summary__label">Total Records</p>
+        <p class="summary__value" id="totalRecords">0</p>
+      </div>
+      <div class="summary__card">
+        <p class="summary__label">Total Columns</p>
+        <p class="summary__value" id="totalColumns">0</p>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel__header">
+        <h2>Filters</h2>
+        <p class="muted">Multi-select values per column to refine the table instantly.</p>
       </div>
       <div class="filters" id="filters"></div>
     </section>
 
-    <section class="kpi-grid" id="kpis"></section>
+    <section class="panel">
+      <div class="panel__header panel__header--stack">
+        <h2>Table Controls</h2>
+        <div class="controls">
+          <label class="control">
+            <span>Search all columns</span>
+            <input type="search" id="globalSearch" placeholder="Type to search..." />
+          </label>
+          <label class="control">
+            <span>Rows per page</span>
+            <select id="rowsPerPage">
+              <option value="10">10</option>
+              <option value="25">25</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+            </select>
+          </label>
+        </div>
+      </div>
+      <div class="column-toggles" id="columnToggles"></div>
+    </section>
 
-    <section class="tables">
-      <div class="table-card">
-        <h3>Column A Summary</h3>
-        <table id="tableA">
-          <thead>
-            <tr>
-              <th>Column A</th>
-              <th>Count</th>
-              <th>Sum (Column B)</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
+    <section class="panel">
+      <div class="table-wrapper">
+        <table class="data-table" aria-live="polite">
+          <thead id="tableHead"></thead>
+          <tbody id="tableBody"></tbody>
         </table>
       </div>
-      <div class="table-card">
-        <h3>Column M Summary</h3>
-        <table id="tableM">
-          <thead>
-            <tr>
-              <th>Column M</th>
-              <th>Count</th>
-              <th>Avg (Column I)</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
+      <div class="pagination" id="pagination"></div>
     </section>
   </div>
 
+  <div class="loading" id="loadingIndicator" aria-live="polite" aria-busy="true">
+    <div class="loading__spinner"></div>
+    <p>Loading Combined.xlsx...</p>
+  </div>
+
+  <div class="error" id="errorMessage" role="alert" hidden></div>
+
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script>
-    const COLUMN_LETTERS = ["A", "B", "C", "I", "M", "O", "R", "W", "AJ"];
-    const FILTER_FIELDS = ["A", "B", "C", "I", "M", "O", "R", "W", "AJ"];
-    const friendlyNames = {
-      A: "Column A",
-      B: "Column B",
-      C: "Column C",
-      I: "Column I",
-      M: "Column M",
-      O: "Column O",
-      R: "Column R",
-      W: "Column W",
-      AJ: "Column AJ"
-    };
-
-    let rawRows = [];
-    const filterState = new Map();
-
-    const filtersContainer = document.getElementById("filters");
-    const kpiContainer = document.getElementById("kpis");
-    const tableABody = document.querySelector("#tableA tbody");
-    const tableMBody = document.querySelector("#tableM tbody");
-
-    function normalizeValue(value) {
-      if (value === null || value === undefined) return "";
-      return String(value).trim();
-    }
-
-    function toNumber(value) {
-      if (value === null || value === undefined || value === "") return null;
-      const cleaned = String(value).replace(/[$,]/g, "");
-      const num = Number(cleaned);
-      return Number.isFinite(num) ? num : null;
-    }
-
-    function buildRows(worksheet) {
-      const range = XLSX.utils.decode_range(worksheet["!ref"]);
-      const rows = [];
-      for (let r = range.s.r; r <= range.e.r; r++) {
-        const row = {};
-        let hasValue = false;
-        COLUMN_LETTERS.forEach((col) => {
-          const colIndex = XLSX.utils.decode_col(col);
-          const cellAddress = XLSX.utils.encode_cell({ r, c: colIndex });
-          const cell = worksheet[cellAddress];
-          const value = cell ? cell.v : "";
-          const normalized = normalizeValue(value);
-          if (normalized !== "") hasValue = true;
-          row[col] = normalized;
-        });
-        if (hasValue) {
-          rows.push(row);
-        }
-      }
-      return rows;
-    }
-
-    function uniqueValues(data, field) {
-      const values = new Set();
-      data.forEach((row) => {
-        const value = normalizeValue(row[field]);
-        if (value !== "") values.add(value);
-      });
-      return Array.from(values).sort((a, b) => a.localeCompare(b));
-    }
-
-    function buildFilters(data) {
-      filtersContainer.innerHTML = "";
-      FILTER_FIELDS.forEach((field) => {
-        const filterBox = document.createElement("div");
-        filterBox.className = "filter-box";
-        filterBox.dataset.field = field;
-
-        const label = document.createElement("div");
-        label.className = "filter-label";
-        label.textContent = friendlyNames[field] || field;
-
-        const selected = document.createElement("div");
-        selected.className = "filter-selected";
-        selected.textContent = "All";
-
-        const dropdown = document.createElement("div");
-        dropdown.className = "filter-dropdown";
-
-        const values = uniqueValues(data, field);
-        values.forEach((value) => {
-          const option = document.createElement("label");
-          option.className = "filter-option";
-          const checkbox = document.createElement("input");
-          checkbox.type = "checkbox";
-          checkbox.value = value;
-          checkbox.addEventListener("change", () => {
-            const set = filterState.get(field);
-            if (checkbox.checked) {
-              set.add(value);
-            } else {
-              set.delete(value);
-            }
-            updateFilterSelected(field, selected);
-            applyFilters();
-          });
-          const span = document.createElement("span");
-          span.textContent = value;
-          option.appendChild(checkbox);
-          option.appendChild(span);
-          dropdown.appendChild(option);
-        });
-
-        filterBox.appendChild(label);
-        filterBox.appendChild(selected);
-        filterBox.appendChild(dropdown);
-
-        filterBox.addEventListener("click", (event) => {
-          event.stopPropagation();
-          document.querySelectorAll(".filter-box").forEach((box) => {
-            if (box !== filterBox) box.classList.remove("active");
-          });
-          filterBox.classList.toggle("active");
-        });
-
-        filtersContainer.appendChild(filterBox);
-        filterState.set(field, new Set());
-      });
-    }
-
-    function updateFilterSelected(field, selectedElement) {
-      const values = Array.from(filterState.get(field));
-      selectedElement.textContent = values.length ? values.join(", ") : "All";
-    }
-
-    function applyFilters() {
-      let filtered = rawRows.slice();
-      filterState.forEach((selected, field) => {
-        if (selected.size === 0) return;
-        filtered = filtered.filter((row) => selected.has(normalizeValue(row[field])));
-      });
-      updateKPIs(filtered);
-      updateTables(filtered);
-    }
-
-    function updateKPIs(data) {
-      const totalRows = data.length;
-      const uniqueA = new Set(data.map((row) => normalizeValue(row.A)).filter(Boolean)).size;
-      const numericB = data.map((row) => toNumber(row.B)).filter((val) => val !== null);
-      const totalB = numericB.reduce((sum, val) => sum + val, 0);
-      const avgB = numericB.length ? totalB / numericB.length : 0;
-
-      const kpis = [
-        { title: "Total Records", value: totalRows.toLocaleString() },
-        { title: "Unique Column A", value: uniqueA.toLocaleString() },
-        { title: "Total Column B", value: totalB.toLocaleString(undefined, { maximumFractionDigits: 2 }) },
-        { title: "Average Column B", value: avgB.toLocaleString(undefined, { maximumFractionDigits: 2 }) }
-      ];
-
-      kpiContainer.innerHTML = "";
-      kpis.forEach((kpi) => {
-        const card = document.createElement("div");
-        card.className = "kpi-card";
-        const title = document.createElement("div");
-        title.className = "kpi-title";
-        title.textContent = kpi.title;
-        const value = document.createElement("div");
-        value.className = "kpi-value";
-        value.textContent = kpi.value;
-        card.appendChild(title);
-        card.appendChild(value);
-        kpiContainer.appendChild(card);
-      });
-    }
-
-    function updateTables(data) {
-      const groupA = new Map();
-      data.forEach((row) => {
-        const key = normalizeValue(row.A) || "(Blank)";
-        const current = groupA.get(key) || { count: 0, sum: 0 };
-        current.count += 1;
-        const value = toNumber(row.B);
-        if (value !== null) current.sum += value;
-        groupA.set(key, current);
-      });
-
-      tableABody.innerHTML = "";
-      Array.from(groupA.entries())
-        .sort((a, b) => b[1].count - a[1].count)
-        .forEach(([key, metrics]) => {
-          const row = document.createElement("tr");
-          row.innerHTML = `
-            <td>${key}</td>
-            <td>${metrics.count.toLocaleString()}</td>
-            <td>${metrics.sum.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
-          `;
-          tableABody.appendChild(row);
-        });
-
-      const groupM = new Map();
-      data.forEach((row) => {
-        const key = normalizeValue(row.M) || "(Blank)";
-        const current = groupM.get(key) || { count: 0, total: 0, nums: 0 };
-        current.count += 1;
-        const value = toNumber(row.I);
-        if (value !== null) {
-          current.total += value;
-          current.nums += 1;
-        }
-        groupM.set(key, current);
-      });
-
-      tableMBody.innerHTML = "";
-      Array.from(groupM.entries())
-        .sort((a, b) => b[1].count - a[1].count)
-        .forEach(([key, metrics]) => {
-          const avg = metrics.nums ? metrics.total / metrics.nums : 0;
-          const row = document.createElement("tr");
-          row.innerHTML = `
-            <td>${key}</td>
-            <td>${metrics.count.toLocaleString()}</td>
-            <td>${avg.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
-          `;
-          tableMBody.appendChild(row);
-        });
-    }
-
-    function resetFilters() {
-      filterState.forEach((set) => set.clear());
-      document.querySelectorAll(".filter-option input").forEach((input) => {
-        input.checked = false;
-      });
-      document.querySelectorAll(".filter-box").forEach((box) => {
-        box.classList.remove("active");
-        const field = box.dataset.field;
-        const selected = box.querySelector(".filter-selected");
-        if (selected) updateFilterSelected(field, selected);
-      });
-      applyFilters();
-    }
-
-    document.getElementById("resetFilters").addEventListener("click", resetFilters);
-
-    document.addEventListener("click", () => {
-      document.querySelectorAll(".filter-box").forEach((box) => box.classList.remove("active"));
-    });
-
-    async function loadData() {
-      const response = await fetch("Combined.xlsx");
-      const arrayBuffer = await response.arrayBuffer();
-      const workbook = XLSX.read(arrayBuffer, { type: "array" });
-      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-      rawRows = buildRows(worksheet);
-      buildFilters(rawRows);
-      applyFilters();
-    }
-
-    loadData().catch((error) => {
-      console.error("Failed to load data", error);
-      kpiContainer.innerHTML = "<div class='muted'>Unable to load dataset.</div>";
-    });
-  </script>
+  <script src="script.js"></script>
 </body>
 </html>
