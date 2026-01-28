@@ -6,6 +6,7 @@
   <title>Floating Shelf</title>
   <link rel="stylesheet" href="style.css" />
   <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
 <body>
   <main class="dashboard">
@@ -15,80 +16,138 @@
         <h1>Floating Shelf</h1>
       </div>
       <div class="dashboard__actions">
-        <button class="fill-record-button" type="button" id="fillRecord">
-          ➕ Fill Record
+        <button class="fill-record-button" type="button" id="toggleGraphView">
+          Toggle Graph View
         </button>
         <button class="reset-button" type="button" id="resetFilters">
           Reset Filters
         </button>
       </div>
     </header>
-
-    <section class="filters" aria-label="Filters">
-      <div class="filters__grid" id="filters"></div>
-    </section>
-
-    <section class="kpi" aria-label="Key performance indicators">
-      <div class="kpi__grid">
-        <article class="kpi-card">
-          <p class="kpi-card__title">ASINs</p>
-          <p class="kpi-card__value" data-kpi="asins">0</p>
-        </article>
-        <article class="kpi-card">
-          <p class="kpi-card__title">Colours</p>
-          <p class="kpi-card__value" data-kpi="colours">0</p>
-        </article>
-        <article class="kpi-card">
-          <p class="kpi-card__title">ASIN Revenue</p>
-          <p class="kpi-card__value" data-kpi="asinRevenue">0</p>
-        </article>
-        <article class="kpi-card">
-          <p class="kpi-card__title">Seller Countries</p>
-          <p class="kpi-card__value" data-kpi="sellerCountries">0</p>
-        </article>
-        <article class="kpi-card">
-          <p class="kpi-card__title">Sellers</p>
-          <p class="kpi-card__value" data-kpi="sellers">0</p>
-        </article>
-      </div>
-    </section>
-
-    <section class="data-table" aria-label="ASIN details">
-      <div class="data-table__header">
+    <section class="dashboard__view dashboard__view--record" data-view="record">
+      <header class="record-view__header">
         <div>
-          <p class="dashboard__eyebrow">Data Table</p>
-          <h2>ASIN Details</h2>
+          <p class="dashboard__eyebrow">Fill Record</p>
+          <h2>New Record Entry</h2>
+          <p class="record-entry__subtitle">
+            Append a new row to the shared dataset. The form mirrors the current column
+            structure from Combined.xlsx → Sheet1.
+          </p>
         </div>
-      </div>
-      <div class="data-table__frame">
-        <table>
-          <colgroup>
-            <col style="width: 14%" />
-            <col style="width: 12%" />
-            <col style="width: 10%" />
-            <col style="width: 8%" />
-            <col style="width: 12%" />
-            <col style="width: 10%" />
-            <col style="width: 12%" />
-            <col style="width: 10%" />
-            <col style="width: 12%" />
-          </colgroup>
-          <thead>
-            <tr>
-              <th scope="col">Design</th>
-              <th scope="col">Seller</th>
-              <th scope="col">ASIN</th>
-              <th scope="col">Pack</th>
-              <th scope="col">L X W X H</th>
-              <th scope="col">Colour</th>
-              <th scope="col">Advantage</th>
-              <th scope="col">Price $</th>
-              <th scope="col">ASIN Revenue</th>
-            </tr>
-          </thead>
-          <tbody data-table-body></tbody>
-        </table>
-      </div>
+      </header>
+
+      <section class="record-entry__info" aria-live="polite">
+        <div>
+          <h2>Connection</h2>
+          <p id="connectionStatus">Loading workbook metadata…</p>
+        </div>
+        <button class="reset-button" type="button" id="manageToken">
+          Manage GitHub Token
+        </button>
+      </section>
+
+      <form class="record-entry__form" id="recordForm">
+        <div class="record-entry__grid" id="formFields"></div>
+        <div class="record-entry__actions">
+          <button class="fill-record-button" type="submit">
+            Save Record
+          </button>
+        </div>
+        <p class="record-entry__message" id="formMessage" role="status"></p>
+      </form>
+    </section>
+
+    <section class="dashboard__view dashboard__view--graph is-active" data-view="graph">
+      <section class="filters" aria-label="Filters">
+        <div class="filters__grid" id="filters"></div>
+      </section>
+
+      <section class="kpi" aria-label="Key performance indicators">
+        <div class="kpi__grid">
+          <article class="kpi-card">
+            <p class="kpi-card__title">ASINs</p>
+            <p class="kpi-card__value" data-kpi="asins">0</p>
+          </article>
+          <article class="kpi-card">
+            <p class="kpi-card__title">Colours</p>
+            <p class="kpi-card__value" data-kpi="colours">0</p>
+          </article>
+          <article class="kpi-card">
+            <p class="kpi-card__title">ASIN Revenue</p>
+            <p class="kpi-card__value" data-kpi="asinRevenue">0</p>
+          </article>
+          <article class="kpi-card">
+            <p class="kpi-card__title">Seller Countries</p>
+            <p class="kpi-card__value" data-kpi="sellerCountries">0</p>
+          </article>
+          <article class="kpi-card">
+            <p class="kpi-card__title">Sellers</p>
+            <p class="kpi-card__value" data-kpi="sellers">0</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="charts" aria-label="Performance charts">
+        <article class="chart-card">
+          <header>
+            <p class="dashboard__eyebrow">Trend</p>
+            <h3>Performance Over Time</h3>
+          </header>
+          <canvas id="trendChart" height="220"></canvas>
+        </article>
+        <article class="chart-card">
+          <header>
+            <p class="dashboard__eyebrow">Comparison</p>
+            <h3>Top Category Comparison</h3>
+          </header>
+          <canvas id="comparisonChart" height="220"></canvas>
+        </article>
+        <article class="chart-card">
+          <header>
+            <p class="dashboard__eyebrow">Distribution</p>
+            <h3>Category Share</h3>
+          </header>
+          <canvas id="distributionChart" height="220"></canvas>
+        </article>
+      </section>
+
+      <section class="data-table" aria-label="ASIN details">
+        <div class="data-table__header">
+          <div>
+            <p class="dashboard__eyebrow">Data Table</p>
+            <h2>ASIN Details</h2>
+          </div>
+        </div>
+        <div class="data-table__frame">
+          <table>
+            <colgroup>
+              <col style="width: 14%" />
+              <col style="width: 12%" />
+              <col style="width: 10%" />
+              <col style="width: 8%" />
+              <col style="width: 12%" />
+              <col style="width: 10%" />
+              <col style="width: 12%" />
+              <col style="width: 10%" />
+              <col style="width: 12%" />
+            </colgroup>
+            <thead>
+              <tr>
+                <th scope="col">Design</th>
+                <th scope="col">Seller</th>
+                <th scope="col">ASIN</th>
+                <th scope="col">Pack</th>
+                <th scope="col">L X W X H</th>
+                <th scope="col">Colour</th>
+                <th scope="col">Advantage</th>
+                <th scope="col">Price $</th>
+                <th scope="col">ASIN Revenue</th>
+              </tr>
+            </thead>
+            <tbody data-table-body></tbody>
+          </table>
+        </div>
+      </section>
     </section>
   </main>
 

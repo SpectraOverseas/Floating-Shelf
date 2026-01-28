@@ -1,4 +1,7 @@
 const DATA_URL = "data/Combined.xlsx";
+const SHEET_NAME = "Sheet1";
+const TOKEN_STORAGE_KEY = "floating-shelf-gh-token";
+const REPO_STORAGE_KEY = "floating-shelf-gh-repo";
 const FILTER_COLUMNS = [
   "ASIN",
   "Colour",
@@ -20,8 +23,18 @@ const PRICE_COLUMN_KEY = "Price  $";
 
 const filtersContainer = document.getElementById("filters");
 const resetButton = document.getElementById("resetFilters");
-const fillRecordButton = document.getElementById("fillRecord");
+const toggleGraphViewButton = document.getElementById("toggleGraphView");
 const tableBody = document.querySelector("[data-table-body]");
+const recordView = document.querySelector('[data-view="record"]');
+const graphView = document.querySelector('[data-view="graph"]');
+const form = document.getElementById("recordForm");
+const formFields = document.getElementById("formFields");
+const formMessage = document.getElementById("formMessage");
+const connectionStatus = document.getElementById("connectionStatus");
+const manageTokenButton = document.getElementById("manageToken");
+const trendChartCanvas = document.getElementById("trendChart");
+const comparisonChartCanvas = document.getElementById("comparisonChart");
+const distributionChartCanvas = document.getElementById("distributionChart");
 const kpiElements = new Map(
   Array.from(document.querySelectorAll("[data-kpi]")).map((el) => [
     el.dataset.kpi,
@@ -44,6 +57,297 @@ const cleanValue = (value) => {
   return String(value).trim();
 };
 
+const DATE_KEYWORDS = ["date", "month", "year", "created", "updated"];
+const FORCED_NUMBER_COLUMNS = new Set(["Parent Level Sales", "Review Count"]);
+
+const inferColumnType = (header, values) => {
+  if (FORCED_NUMBER_COLUMNS.has(header)) {
+    return "number";
+  }
+
+  const headerLower = header.toLowerCase();
+  if (DATE_KEYWORDS.some((keyword) => headerLower.includes(keyword))) {
+    return "date";
+  }
+
+  const sample = values.filter((value) => value !== "").slice(0, 30);
+  if (!sample.length) {
+    return "text";
+  }
+
+  const numericValues = sample.filter((value) => !Number.isNaN(Number(value)));
+  if (numericValues.length === sample.length) {
+    return "number";
+  }
+
+  const uniqueValues = Array.from(
+    new Set(sample.map((value) => cleanValue(value)))
+  ).filter(Boolean);
+  if (uniqueValues.length > 0 && uniqueValues.length <= 8) {
+    return "select";
+  }
+
+  return "text";
+};
+
+const inferSelectOptions = (values) => {
+  const uniqueValues = Array.from(
+    new Set(values.map((value) => cleanValue(value)))
+  ).filter(Boolean);
+  return uniqueValues.sort((a, b) => a.localeCompare(b));
+};
+
+const buildRepoDetails = () => {
+  const saved = localStorage.getItem(REPO_STORAGE_KEY);
+  if (saved) {
+    try {
+      return JSON.parse(saved);
+    } catch (error) {
+      console.warn("Failed to parse repo details", error);
+    }
+  }
+
+  const host = window.location.hostname;
+  const pathParts = window.location.pathname.split("/").filter(Boolean);
+  if (host.endsWith("github.io") && pathParts.length > 0) {
+    const owner = host.replace(".github.io", "");
+    const repo = pathParts[0];
+    return { owner, repo, branch: "main", path: DATA_URL };
+  }
+
+  return { owner: "", repo: "", branch: "main", path: DATA_URL };
+};
+
+const saveRepoDetails = (details) => {
+  localStorage.setItem(REPO_STORAGE_KEY, JSON.stringify(details));
+};
+
+const getToken = () => localStorage.getItem(TOKEN_STORAGE_KEY) || "";
+
+const updateConnectionStatus = (details) => {
+  if (!details.owner || !details.repo) {
+    connectionStatus.textContent =
+      "Repository details are missing. Click Manage GitHub Token to configure the owner and repo.";
+    return;
+  }
+
+  connectionStatus.textContent = `Saving to ${details.owner}/${details.repo}/${details.path} on ${details.branch}.`;
+};
+
+const requestToken = (details) => {
+  const owner = window.prompt("GitHub owner/user name", details.owner || "");
+  if (owner === null) {
+    return null;
+  }
+  const repo = window.prompt("GitHub repository name", details.repo || "");
+  if (repo === null) {
+    return null;
+  }
+  const branch = window.prompt("Branch name", details.branch || "main");
+  if (branch === null) {
+    return null;
+  }
+  const token = window.prompt(
+    "GitHub Personal Access Token with repo contents permission (stored locally)",
+    getToken() || ""
+  );
+  if (token === null) {
+    return null;
+  }
+  const nextDetails = {
+    owner: owner.trim(),
+    repo: repo.trim(),
+    branch: branch.trim() || "main",
+    path: details.path,
+  };
+  saveRepoDetails(nextDetails);
+  if (token.trim()) {
+    localStorage.setItem(TOKEN_STORAGE_KEY, token.trim());
+  }
+  updateConnectionStatus(nextDetails);
+  return nextDetails;
+};
+
+const fetchWorkbook = async () => {
+  const response = await fetch(buildDataUrl(), {
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    throw new Error("Unable to load workbook.");
+  }
+  const arrayBuffer = await response.arrayBuffer();
+  return XLSX.read(arrayBuffer, { type: "array" });
+};
+
+const setValidationMessage = (input, fieldType) => {
+  const value = input.value.trim();
+  if (!value) {
+    input.setCustomValidity("");
+    return;
+  }
+  if (fieldType === "number" && Number.isNaN(Number(value))) {
+    input.setCustomValidity("Please enter a valid number.");
+    return;
+  }
+  input.setCustomValidity("");
+};
+
+const buildForm = (headers, rows) => {
+  formFields.replaceChildren();
+  headers.forEach((header, index) => {
+    const fieldWrapper = document.createElement("div");
+    fieldWrapper.className = "form-field";
+
+    const label = document.createElement("label");
+    label.textContent = header;
+    label.setAttribute("for", `field-${index}`);
+
+    const columnValues = rows.map((row) => row[index]);
+    const fieldType = inferColumnType(header, columnValues);
+    let input;
+    let datalist;
+
+    if (fieldType === "select") {
+      input = document.createElement("input");
+      datalist = document.createElement("datalist");
+      const listId = `field-options-${index}`;
+      datalist.id = listId;
+      input.setAttribute("list", listId);
+      input.placeholder = "Select or type";
+      inferSelectOptions(columnValues).forEach((optionValue) => {
+        const option = document.createElement("option");
+        option.value = optionValue;
+        datalist.appendChild(option);
+      });
+    } else {
+      input = document.createElement("input");
+      input.type = fieldType;
+      if (fieldType === "date") {
+        input.placeholder = "YYYY-MM-DD";
+      } else if (fieldType === "number") {
+        input.step = "any";
+        input.inputMode = "decimal";
+      }
+    }
+
+    input.id = `field-${index}`;
+    input.name = header;
+    input.required = true;
+    if (fieldType === "number") {
+      fieldWrapper.classList.add("form-field--number");
+    }
+    input.addEventListener("input", () => setValidationMessage(input, fieldType));
+
+    fieldWrapper.appendChild(label);
+    fieldWrapper.appendChild(input);
+    if (datalist) {
+      fieldWrapper.appendChild(datalist);
+    }
+    formFields.appendChild(fieldWrapper);
+  });
+};
+
+const encodeBase64 = (arrayBuffer) => {
+  let binary = "";
+  const bytes = new Uint8Array(arrayBuffer);
+  bytes.forEach((byte) => {
+    binary += String.fromCharCode(byte);
+  });
+  return btoa(binary);
+};
+
+const appendRowToSheet = (workbook, headers, rowValues) => {
+  const sheet = workbook.Sheets[SHEET_NAME];
+  if (!sheet) {
+    throw new Error(`Sheet "${SHEET_NAME}" not found.`);
+  }
+
+  const data = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
+  const safeHeaders = data[0] || headers;
+  const nextRow = safeHeaders.map((header, index) => {
+    const value = rowValues[index];
+    return value === undefined || value === null ? "" : value;
+  });
+  data.push(nextRow);
+
+  const updatedSheet = XLSX.utils.aoa_to_sheet(data);
+  workbook.Sheets[SHEET_NAME] = updatedSheet;
+  return workbook;
+};
+
+const fetchRepoFile = async (details, token) => {
+  const apiUrl = `https://api.github.com/repos/${details.owner}/${details.repo}/contents/${details.path}`;
+  const response = await fetch(apiUrl, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/vnd.github+json",
+    },
+  });
+  if (!response.ok) {
+    throw new Error("Unable to fetch repository file metadata.");
+  }
+  return response.json();
+};
+
+const updateRepoFile = async (details, token, content, sha) => {
+  const apiUrl = `https://api.github.com/repos/${details.owner}/${details.repo}/contents/${details.path}`;
+  const response = await fetch(apiUrl, {
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/vnd.github+json",
+    },
+    body: JSON.stringify({
+      message: "Append record to Combined.xlsx",
+      content,
+      sha,
+      branch: details.branch,
+    }),
+  });
+  if (!response.ok) {
+    throw new Error("Unable to write to repository file.");
+  }
+  return response.json();
+};
+
+const formatMessage = (message, isError = false) => {
+  formMessage.textContent = message;
+  formMessage.classList.toggle("is-error", isError);
+};
+
+const findColumnByKeywords = (columns, keywords) => {
+  const lowerColumns = columns.map((column) => ({
+    key: column,
+    lower: column.toLowerCase(),
+  }));
+  for (const keyword of keywords) {
+    const match = lowerColumns.find((column) => column.lower.includes(keyword));
+    if (match) {
+      return match.key;
+    }
+  }
+  return "";
+};
+
+const parseDateValue = (value) => {
+  if (!value) {
+    return null;
+  }
+  const raw = cleanValue(value);
+  const parsed = Date.parse(raw);
+  if (!Number.isNaN(parsed)) {
+    return new Date(parsed);
+  }
+  const asNumber = Number(raw);
+  if (!Number.isNaN(asNumber)) {
+    return new Date(asNumber, 0, 1);
+  }
+  return null;
+};
+
+let trendChart;
+let comparisonChart;
+let distributionChart;
 const parseNumericValue = (value) => {
   const normalized = cleanValue(value);
   if (!normalized) {
@@ -258,6 +562,7 @@ const updateDashboard = () => {
   const rows = filteredRows();
   renderKpis(rows);
   renderTable(rows);
+  renderCharts(rows);
 };
 
 const attachFilterListeners = () => {
@@ -337,10 +642,9 @@ const loadData = async () => {
   });
   const arrayBuffer = await response.arrayBuffer();
   const workbook = XLSX.read(arrayBuffer, { type: "array" });
-  const sheetName = "Sheet1";
-  const sheet = workbook.Sheets[sheetName];
+  const sheet = workbook.Sheets[SHEET_NAME];
   if (!sheet) {
-    throw new Error(`Sheet "${sheetName}" not found in workbook.`);
+    throw new Error(`Sheet "${SHEET_NAME}" not found in workbook.`);
   }
   const rows = XLSX.utils.sheet_to_json(sheet, {
     defval: "",
@@ -371,17 +675,339 @@ const refreshData = async () => {
   }
 };
 
+const buildChartCard = (canvas, config) => {
+  if (!canvas) {
+    return null;
+  }
+  return new Chart(canvas, config);
+};
+
+const buildTrendData = (rows) => {
+  if (!rows.length) {
+    return { labels: [], values: [] };
+  }
+  const columns = Object.keys(rows[0]);
+  const dateColumn = findColumnByKeywords(columns, DATE_KEYWORDS);
+  const valueColumn = findColumnByKeywords(columns, [
+    "revenue",
+    "price",
+    "sales",
+    "units",
+  ]);
+  if (!dateColumn || !valueColumn) {
+    return { labels: [], values: [] };
+  }
+
+  const grouped = new Map();
+  rows.forEach((row) => {
+    const dateValue = cleanValue(row[dateColumn]);
+    const parsedDate = parseDateValue(dateValue);
+    if (!dateValue || !parsedDate) {
+      return;
+    }
+    const label = dateValue;
+    const current = grouped.get(label) || { total: 0, date: parsedDate };
+    const value = parseNumericValue(row[valueColumn]) ?? 0;
+    grouped.set(label, { total: current.total + value, date: parsedDate });
+  });
+
+  const entries = Array.from(grouped.entries()).sort((a, b) => {
+    return a[1].date - b[1].date;
+  });
+
+  return {
+    labels: entries.map(([label]) => label),
+    values: entries.map(([, entry]) => entry.total),
+  };
+};
+
+const buildComparisonData = (rows) => {
+  if (!rows.length) {
+    return { labels: [], values: [], valueLabel: "" };
+  }
+  const columns = Object.keys(rows[0]);
+  const valueColumn = findColumnByKeywords(columns, [
+    "revenue",
+    "price",
+    "sales",
+    "units",
+  ]);
+  const categoryColumn = findColumnByKeywords(columns, [
+    "seller",
+    "design",
+    "colour",
+    "material",
+  ]);
+  if (!valueColumn || !categoryColumn) {
+    return { labels: [], values: [], valueLabel: "" };
+  }
+
+  const totals = new Map();
+  rows.forEach((row) => {
+    const category = cleanValue(row[categoryColumn]);
+    if (!category) {
+      return;
+    }
+    const value = parseNumericValue(row[valueColumn]) ?? 0;
+    totals.set(category, (totals.get(category) || 0) + value);
+  });
+
+  const sorted = Array.from(totals.entries()).sort((a, b) => b[1] - a[1]);
+  const topEntries = sorted.slice(0, 8);
+
+  return {
+    labels: topEntries.map(([label]) => label),
+    values: topEntries.map(([, value]) => value),
+    valueLabel: `${valueColumn} by ${categoryColumn}`,
+  };
+};
+
+const buildDistributionData = (rows) => {
+  if (!rows.length) {
+    return { labels: [], values: [], valueLabel: "" };
+  }
+  const columns = Object.keys(rows[0]);
+  const categoryColumn = findColumnByKeywords(columns, [
+    "seller",
+    "country",
+    "colour",
+    "material",
+  ]);
+  if (!categoryColumn) {
+    return { labels: [], values: [], valueLabel: "" };
+  }
+  const counts = new Map();
+  rows.forEach((row) => {
+    const value = cleanValue(row[categoryColumn]);
+    if (!value) {
+      return;
+    }
+    counts.set(value, (counts.get(value) || 0) + 1);
+  });
+  const sorted = Array.from(counts.entries()).sort((a, b) => b[1] - a[1]);
+  const topEntries = sorted.slice(0, 6);
+  return {
+    labels: topEntries.map(([label]) => label),
+    values: topEntries.map(([, value]) => value),
+    valueLabel: `${categoryColumn} share`,
+  };
+};
+
+const renderCharts = (rows) => {
+  if (!trendChartCanvas || !comparisonChartCanvas || !distributionChartCanvas) {
+    return;
+  }
+
+  const trendData = buildTrendData(rows);
+  const comparisonData = buildComparisonData(rows);
+  const distributionData = buildDistributionData(rows);
+
+  if (!trendChart) {
+    trendChart = buildChartCard(trendChartCanvas, {
+      type: "line",
+      data: {
+        labels: trendData.labels,
+        datasets: [
+          {
+            label: "Trend",
+            data: trendData.values,
+            borderColor: "#2563eb",
+            backgroundColor: "rgba(37, 99, 235, 0.2)",
+            tension: 0.3,
+            fill: true,
+            pointRadius: 3,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: false },
+          tooltip: { mode: "index", intersect: false },
+        },
+        scales: {
+          y: {
+            ticks: {
+              callback: (value) => numberFormatter.format(value),
+            },
+          },
+        },
+      },
+    });
+  } else {
+    trendChart.data.labels = trendData.labels;
+    trendChart.data.datasets[0].data = trendData.values;
+    trendChart.update();
+  }
+
+  if (!comparisonChart) {
+    comparisonChart = buildChartCard(comparisonChartCanvas, {
+      type: "bar",
+      data: {
+        labels: comparisonData.labels,
+        datasets: [
+          {
+            label: comparisonData.valueLabel || "Totals",
+            data: comparisonData.values,
+            backgroundColor: "#0f172a",
+            borderRadius: 8,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: {
+            ticks: {
+              callback: (value) => numberFormatter.format(value),
+            },
+          },
+        },
+      },
+    });
+  } else {
+    comparisonChart.data.labels = comparisonData.labels;
+    comparisonChart.data.datasets[0].data = comparisonData.values;
+    comparisonChart.update();
+  }
+
+  if (!distributionChart) {
+    distributionChart = buildChartCard(distributionChartCanvas, {
+      type: "pie",
+      data: {
+        labels: distributionData.labels,
+        datasets: [
+          {
+            label: distributionData.valueLabel || "Distribution",
+            data: distributionData.values,
+            backgroundColor: [
+              "#2563eb",
+              "#38bdf8",
+              "#22c55e",
+              "#f97316",
+              "#a855f7",
+              "#facc15",
+            ],
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { position: "bottom" },
+        },
+      },
+    });
+  } else {
+    distributionChart.data.labels = distributionData.labels;
+    distributionChart.data.datasets[0].data = distributionData.values;
+    distributionChart.update();
+  }
+};
+
+const setActiveView = (viewName) => {
+  if (!recordView || !graphView) {
+    return;
+  }
+  const isGraph = viewName === "graph";
+  graphView.classList.toggle("is-active", isGraph);
+  recordView.classList.toggle("is-active", !isGraph);
+};
+
+const initRecordForm = async () => {
+  if (!form) {
+    return;
+  }
+  const repoDetails = buildRepoDetails();
+  updateConnectionStatus(repoDetails);
+  if (manageTokenButton) {
+    manageTokenButton.addEventListener("click", () => {
+      requestToken(repoDetails);
+    });
+  }
+
+  try {
+    const workbook = await fetchWorkbook();
+    const sheet = workbook.Sheets[SHEET_NAME];
+    if (!sheet) {
+      throw new Error(`Sheet "${SHEET_NAME}" not found.`);
+    }
+    const data = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
+    const headers = data[0];
+    if (!headers || headers.length === 0) {
+      throw new Error(`${SHEET_NAME} does not contain headers.`);
+    }
+    buildForm(headers, data.slice(1));
+  } catch (error) {
+    formatMessage(error.message, true);
+  }
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    formatMessage("");
+
+    const repoDetails = buildRepoDetails();
+    const token = getToken();
+    if (!repoDetails.owner || !repoDetails.repo || !token) {
+      const updated = requestToken(repoDetails);
+      if (!updated || !getToken()) {
+        formatMessage("Repository details and token are required to save.", true);
+        return;
+      }
+    }
+
+    const inputs = Array.from(formFields.querySelectorAll("input"));
+    inputs.forEach((input) => {
+      const fieldType = input.type;
+      setValidationMessage(input, fieldType);
+    });
+    if (!form.checkValidity()) {
+      form.reportValidity();
+      formatMessage("Please correct the highlighted fields.", true);
+      return;
+    }
+
+    const rowValues = inputs.map((input) => input.value.trim());
+
+    try {
+      const workbook = await fetchWorkbook();
+      const sheet = workbook.Sheets[SHEET_NAME];
+      const data = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
+      const headers = data[0] || [];
+
+      appendRowToSheet(workbook, headers, rowValues);
+
+      const arrayBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+      const content = encodeBase64(arrayBuffer);
+      const details = buildRepoDetails();
+      const fileMeta = await fetchRepoFile(details, getToken());
+      await updateRepoFile(details, getToken(), content, fileMeta.sha);
+
+      formatMessage("Record added successfully");
+      await refreshData();
+      setActiveView("graph");
+      form.reset();
+    } catch (error) {
+      formatMessage(error.message || "Unable to save record.", true);
+    }
+  });
+};
+
 const init = async () => {
   rawData = await loadData();
   lastDataSignature = getDataSignature(rawData);
   updateFilters(rawData);
   attachFilterListeners();
   resetButton.addEventListener("click", resetFilters);
-  if (fillRecordButton) {
-    fillRecordButton.addEventListener("click", () => {
-      window.open("record-entry.html", "_blank", "noopener");
+  if (toggleGraphViewButton) {
+    toggleGraphViewButton.addEventListener("click", () => {
+      const isGraphActive = graphView.classList.contains("is-active");
+      setActiveView(isGraphActive ? "record" : "graph");
     });
   }
+  await initRecordForm();
+  setActiveView("graph");
   updateDashboard();
   window.setInterval(refreshData, 15000);
 };
