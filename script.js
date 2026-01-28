@@ -30,6 +30,7 @@ const tableBody = document.querySelector("[data-table-body]");
 const recordView = document.querySelector('[data-view="record"]');
 const graphView = document.querySelector('[data-view="graph"]');
 const tableView = document.querySelector('[data-view="table"]');
+const sharedSection = document.querySelector('[data-shared="dashboard"]');
 const form = document.getElementById("recordForm");
 const formFields = document.getElementById("formFields");
 const formMessage = document.getElementById("formMessage");
@@ -922,6 +923,10 @@ const setActiveView = (viewName) => {
     }
     view.classList.toggle("is-active", key === viewName);
   });
+
+  if (sharedSection) {
+    sharedSection.classList.toggle("is-hidden", viewName === "record");
+  }
 };
 
 const initRecordForm = async () => {
