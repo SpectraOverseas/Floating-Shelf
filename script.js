@@ -240,8 +240,12 @@ const loadData = async () => {
   const response = await fetch(DATA_URL);
   const arrayBuffer = await response.arrayBuffer();
   const workbook = XLSX.read(arrayBuffer, { type: "array" });
-  const sheetName = workbook.SheetNames[0];
-  const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {
+  const sheetName = "Sheet1";
+  const sheet = workbook.Sheets[sheetName];
+  if (!sheet) {
+    throw new Error(`Sheet "${sheetName}" not found in workbook.`);
+  }
+  const rows = XLSX.utils.sheet_to_json(sheet, {
     defval: "",
   });
   return rows;
