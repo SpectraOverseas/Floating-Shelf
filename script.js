@@ -2,7 +2,7 @@ const FILTER_COLUMNS = [
   "ASIN",
   "L X W X H",
   "Colour",
-  "Material",
+  "Advantage",
   "Seller Country/Region",
   "Seller",
 ];
@@ -18,7 +18,15 @@ const elements = {
   loadingIndicator: document.getElementById("loadingIndicator"),
   errorMessage: document.getElementById("errorMessage"),
   filtersContainer: document.getElementById("filtersContainer"),
+  resetFilters: document.getElementById("resetFilters"),
+  kpiContainer: document.getElementById("kpiContainer"),
+  tableHead: document.getElementById("tableHead"),
+  tableBody: document.getElementById("tableBody"),
+  tableCount: document.getElementById("tableCount"),
+  filterSelects: {},
 };
+
+const numberFormatter = new Intl.NumberFormat("en-US");
 
 const formatValue = (value) => {
   if (value instanceof Date) {
@@ -109,6 +117,7 @@ const loadExcel = async () => {
 
 const buildFilters = () => {
   elements.filtersContainer.innerHTML = "";
+  elements.filterSelects = {};
 
   FILTER_COLUMNS.forEach((column) => {
     const filterCard = document.createElement("div");
@@ -121,11 +130,10 @@ const buildFilters = () => {
     const select = document.createElement("select");
     select.id = `filter-${column}`;
     select.multiple = true;
+    select.size = 6;
     select.dataset.column = column;
 
-    const values = new Set(
-      state.data.map((row) => formatValue(row[column]))
-    );
+    const values = new Set(state.data.map((row) => formatValue(row[column])));
 
     [...values]
       .filter((value) => value !== "")
@@ -150,25 +158,10 @@ const buildFilters = () => {
       updateFilteredData();
     });
 
-    const clearButton = document.createElement("button");
-    clearButton.type = "button";
-    clearButton.className = "clear-button";
-    clearButton.setAttribute("aria-label", `Clear ${column} filter`);
-    clearButton.textContent = "✕";
-    clearButton.addEventListener("click", () => {
-      select.selectedIndex = -1;
-      state.filters[column].clear();
-      updateFilteredData();
-    });
-
-    const fieldRow = document.createElement("div");
-    fieldRow.className = "filter-field";
-    fieldRow.appendChild(select);
-    fieldRow.appendChild(clearButton);
-
     filterCard.appendChild(label);
-    filterCard.appendChild(fieldRow);
+    filterCard.appendChild(select);
     elements.filtersContainer.appendChild(filterCard);
+    elements.filterSelects[column] = select;
   });
 };
 
@@ -185,8 +178,96 @@ const applyFilters = () => {
   );
 };
 
+const getUniqueCount = (data, column) => {
+  if (!state.columns.includes(column)) {
+    return 0;
+  }
+  const unique = new Set(
+    data
+      .map((row) => formatValue(row[column]))
+      .filter((value) => value !== "")
+  );
+  return unique.size;
+};
+
+const renderKpis = () => {
+  const totalRows = state.filteredData.length;
+  const asinCount = getUniqueCount(state.filteredData, "ASIN");
+  const sellerCount = getUniqueCount(state.filteredData, "Seller");
+  const colourCount = getUniqueCount(state.filteredData, "Colour");
+
+  const kpis = [
+    { label: "Total Records", value: numberFormatter.format(totalRows) },
+    { label: "Unique ASINs", value: numberFormatter.format(asinCount) },
+    { label: "Unique Sellers", value: numberFormatter.format(sellerCount) },
+    { label: "Unique Colours", value: numberFormatter.format(colourCount) },
+  ];
+
+  elements.kpiContainer.innerHTML = "";
+  kpis.forEach((kpi) => {
+    const card = document.createElement("div");
+    card.className = "kpi-card";
+
+    const label = document.createElement("p");
+    label.className = "kpi-label";
+    label.textContent = kpi.label;
+
+    const value = document.createElement("p");
+    value.className = "kpi-value";
+    value.textContent = kpi.value;
+
+    card.appendChild(label);
+    card.appendChild(value);
+    elements.kpiContainer.appendChild(card);
+  });
+};
+
+const renderTable = () => {
+  elements.tableHead.innerHTML = "";
+  elements.tableBody.innerHTML = "";
+
+  if (!state.columns.length) {
+    return;
+  }
+
+  const headerRow = document.createElement("tr");
+  state.columns.forEach((column) => {
+    const th = document.createElement("th");
+    th.textContent = column;
+    headerRow.appendChild(th);
+  });
+  elements.tableHead.appendChild(headerRow);
+
+  state.filteredData.forEach((row) => {
+    const tr = document.createElement("tr");
+    state.columns.forEach((column) => {
+      const td = document.createElement("td");
+      td.textContent = formatValue(row[column]);
+      tr.appendChild(td);
+    });
+    elements.tableBody.appendChild(tr);
+  });
+
+  elements.tableCount.textContent = `${numberFormatter.format(state.filteredData.length)} rows`;
+};
+
 const updateFilteredData = () => {
   state.filteredData = applyFilters();
+  renderKpis();
+  renderTable();
 };
+
+const resetFilters = () => {
+  FILTER_COLUMNS.forEach((column) => {
+    state.filters[column].clear();
+    const select = elements.filterSelects[column];
+    if (select) {
+      select.selectedIndex = -1;
+    }
+  });
+  updateFilteredData();
+};
+
+elements.resetFilters.addEventListener("click", resetFilters);
 
 loadExcel();

@@ -18,6 +18,26 @@
         <span class="error" id="errorMessage" role="alert"></span>
       </div>
       <div class="filters-grid" id="filtersContainer"></div>
+      <div class="filters-actions">
+        <button class="reset-button" id="resetFilters" type="button">Reset Filters</button>
+      </div>
+    </section>
+
+    <section class="kpi-grid" aria-label="KPI summary" id="kpiContainer"></section>
+
+    <section class="table-card" aria-label="SKU detail table">
+      <div class="table-header">
+        <div>
+          <h2>SKU Detail Table</h2>
+          <p id="tableCount">0 rows</p>
+        </div>
+      </div>
+      <div class="table-wrapper">
+        <table>
+          <thead id="tableHead"></thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
     </section>
   </main>
 
