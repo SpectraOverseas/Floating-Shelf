@@ -3,6 +3,7 @@ const FILTER_COLUMNS = [
   "ASIN",
   "Colour",
   "Material",
+  "L X W X H",
   "Seller Country/Region",
   "Seller",
 ];
@@ -15,17 +16,7 @@ const KPI_CONFIG = [
   { key: "sellers", column: "Seller", type: "unique" },
 ];
 
-const TABLE_COLUMNS = [
-  { label: "Design", key: "Design" },
-  { label: "Seller", key: "Seller" },
-  { label: "ASIN", key: "ASIN" },
-  { label: "Pack", key: "Pack" },
-  { label: "L X W X H", key: "L X W X H" },
-  { label: "Colour", key: "Colour" },
-  { label: "Advantage", key: "Advantage" },
-  { label: "Price $", key: "Price $" },
-  { label: "ASIN Revenue", key: "ASIN Revenue" },
-];
+const PRICE_COLUMN_KEY = "Price  $";
 
 const filtersContainer = document.getElementById("filters");
 const resetButton = document.getElementById("resetFilters");
@@ -50,6 +41,39 @@ const cleanValue = (value) => {
   }
   return String(value).trim();
 };
+
+const parseNumericValue = (value) => {
+  const normalized = cleanValue(value);
+  if (!normalized) {
+    return null;
+  }
+  const raw = normalized.replace(/[^0-9.-]+/g, "");
+  if (!raw) {
+    return null;
+  }
+  const parsed = Number.parseFloat(raw);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const formatPriceValue = (value) => {
+  const parsed = parseNumericValue(value);
+  if (parsed === null) {
+    return cleanValue(value);
+  }
+  return numberFormatter.format(parsed);
+};
+
+const TABLE_COLUMNS = [
+  { label: "Design", key: "Design" },
+  { label: "Seller", key: "Seller" },
+  { label: "ASIN", key: "ASIN" },
+  { label: "Pack", key: "Pack" },
+  { label: "L X W X H", key: "L X W X H" },
+  { label: "Colour", key: "Colour" },
+  { label: "Advantage", key: "Advantage" },
+  { label: "Price $", key: PRICE_COLUMN_KEY, formatter: formatPriceValue },
+  { label: "ASIN Revenue", key: "ASIN Revenue" },
+];
 
 const uniqueValues = (rows, column) => {
   const values = new Set();
@@ -216,7 +240,10 @@ const renderTable = (rows) => {
     const tr = document.createElement("tr");
     TABLE_COLUMNS.forEach((column) => {
       const td = document.createElement("td");
-      td.textContent = cleanValue(row[column.key]);
+      const rawValue = row[column.key];
+      td.textContent = column.formatter
+        ? column.formatter(rawValue)
+        : cleanValue(rawValue);
       tr.appendChild(td);
     });
     fragment.appendChild(tr);
