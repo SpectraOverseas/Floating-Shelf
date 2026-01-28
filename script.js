@@ -25,9 +25,11 @@ const filtersContainer = document.getElementById("filters");
 const resetButton = document.getElementById("resetFilters");
 const showRecordViewButton = document.getElementById("showRecordView");
 const showGraphViewButton = document.getElementById("showGraphView");
+const showTableViewButton = document.getElementById("showTableView");
 const tableBody = document.querySelector("[data-table-body]");
 const recordView = document.querySelector('[data-view="record"]');
 const graphView = document.querySelector('[data-view="graph"]');
+const tableView = document.querySelector('[data-view="table"]');
 const form = document.getElementById("recordForm");
 const formFields = document.getElementById("formFields");
 const formMessage = document.getElementById("formMessage");
@@ -908,12 +910,18 @@ const renderCharts = (rows) => {
 };
 
 const setActiveView = (viewName) => {
-  if (!recordView || !graphView) {
-    return;
-  }
-  const isGraph = viewName === "graph";
-  graphView.classList.toggle("is-active", isGraph);
-  recordView.classList.toggle("is-active", !isGraph);
+  const views = {
+    record: recordView,
+    graph: graphView,
+    table: tableView,
+  };
+
+  Object.entries(views).forEach(([key, view]) => {
+    if (!view) {
+      return;
+    }
+    view.classList.toggle("is-active", key === viewName);
+  });
 };
 
 const initRecordForm = async () => {
@@ -987,7 +995,7 @@ const initRecordForm = async () => {
 
       formatMessage("Record added successfully");
       await refreshData();
-      setActiveView("graph");
+      setActiveView("table");
       form.reset();
     } catch (error) {
       formatMessage(error.message || "Unable to save record.", true);
@@ -1011,8 +1019,13 @@ const init = async () => {
       setActiveView("graph");
     });
   }
+  if (showTableViewButton) {
+    showTableViewButton.addEventListener("click", () => {
+      setActiveView("table");
+    });
+  }
   await initRecordForm();
-  setActiveView("graph");
+  setActiveView("table");
   updateDashboard();
   window.setInterval(refreshData, 15000);
 };
