@@ -243,6 +243,19 @@ h1 {
   gap: 16px;
 }
 
+.graph-view__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.graph-view__header h2 {
+  font-size: 1.4rem;
+  font-weight: 600;
+}
+
 .charts {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));

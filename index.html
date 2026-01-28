@@ -60,7 +60,56 @@
       </form>
     </section>
 
-    <section class="dashboard__view dashboard__view--graph is-active" data-view="graph">
+    <section class="dashboard__view dashboard__view--table is-active" data-view="table">
+      <section class="data-table" aria-label="ASIN details">
+        <div class="data-table__header">
+          <div>
+            <p class="dashboard__eyebrow">Data Table</p>
+            <h2>ASIN Details</h2>
+          </div>
+        </div>
+        <div class="data-table__frame">
+          <table>
+            <colgroup>
+              <col style="width: 14%" />
+              <col style="width: 12%" />
+              <col style="width: 10%" />
+              <col style="width: 8%" />
+              <col style="width: 12%" />
+              <col style="width: 10%" />
+              <col style="width: 12%" />
+              <col style="width: 10%" />
+              <col style="width: 12%" />
+            </colgroup>
+            <thead>
+              <tr>
+                <th scope="col">Design</th>
+                <th scope="col">Seller</th>
+                <th scope="col">ASIN</th>
+                <th scope="col">Pack</th>
+                <th scope="col">L X W X H</th>
+                <th scope="col">Colour</th>
+                <th scope="col">Advantage</th>
+                <th scope="col">Price $</th>
+                <th scope="col">ASIN Revenue</th>
+              </tr>
+            </thead>
+            <tbody data-table-body></tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+
+    <section class="dashboard__view dashboard__view--graph" data-view="graph">
+      <header class="graph-view__header">
+        <div>
+          <p class="dashboard__eyebrow">Graph View</p>
+          <h2>Performance Insights</h2>
+        </div>
+        <button class="ghost-button" type="button" id="showTableView">
+          Back to Table View
+        </button>
+      </header>
       <section class="filters" aria-label="Filters">
         <div class="filters__grid" id="filters"></div>
       </section>
@@ -112,44 +161,6 @@
           </header>
           <canvas id="distributionChart" height="220"></canvas>
         </article>
-      </section>
-
-      <section class="data-table" aria-label="ASIN details">
-        <div class="data-table__header">
-          <div>
-            <p class="dashboard__eyebrow">Data Table</p>
-            <h2>ASIN Details</h2>
-          </div>
-        </div>
-        <div class="data-table__frame">
-          <table>
-            <colgroup>
-              <col style="width: 14%" />
-              <col style="width: 12%" />
-              <col style="width: 10%" />
-              <col style="width: 8%" />
-              <col style="width: 12%" />
-              <col style="width: 10%" />
-              <col style="width: 12%" />
-              <col style="width: 10%" />
-              <col style="width: 12%" />
-            </colgroup>
-            <thead>
-              <tr>
-                <th scope="col">Design</th>
-                <th scope="col">Seller</th>
-                <th scope="col">ASIN</th>
-                <th scope="col">Pack</th>
-                <th scope="col">L X W X H</th>
-                <th scope="col">Colour</th>
-                <th scope="col">Advantage</th>
-                <th scope="col">Price $</th>
-                <th scope="col">ASIN Revenue</th>
-              </tr>
-            </thead>
-            <tbody data-table-body></tbody>
-          </table>
-        </div>
       </section>
     </section>
   </main>
