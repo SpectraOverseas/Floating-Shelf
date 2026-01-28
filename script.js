@@ -20,6 +20,7 @@ const PRICE_COLUMN_KEY = "Price  $";
 
 const filtersContainer = document.getElementById("filters");
 const resetButton = document.getElementById("resetFilters");
+const fillRecordButton = document.getElementById("fillRecord");
 const tableBody = document.querySelector("[data-table-body]");
 const kpiElements = new Map(
   Array.from(document.querySelectorAll("[data-kpi]")).map((el) => [
@@ -29,6 +30,7 @@ const kpiElements = new Map(
 );
 
 let rawData = [];
+let lastDataSignature = "";
 const activeFilters = {};
 
 const numberFormatter = new Intl.NumberFormat("en-US", {
@@ -299,6 +301,36 @@ const resetFilters = () => {
 
 const buildDataUrl = () => `${DATA_URL}?v=${Date.now()}`;
 
+const updateFilters = (rows) => {
+  const previousSelections = {};
+  Object.keys(activeFilters).forEach((column) => {
+    previousSelections[column] = new Set(activeFilters[column]);
+  });
+
+  filtersContainer.replaceChildren();
+  FILTER_COLUMNS.forEach((column) => {
+    const values = uniqueValues(rows, column);
+    buildFilter(column, values);
+    const selectElement = filtersContainer.querySelector(
+      `.multi-select[data-filter="${column}"]`
+    );
+    const savedSelections = previousSelections[column];
+    if (!selectElement || !savedSelections) {
+      return;
+    }
+    const available = new Set(["All", ...values]);
+    const nextSelections = new Set(
+      Array.from(savedSelections).filter((value) => available.has(value))
+    );
+    if (nextSelections.size === 0) {
+      nextSelections.add("All");
+    }
+    activeFilters[column] = nextSelections;
+    syncCheckboxes(selectElement, nextSelections);
+    updateToggleLabel(selectElement, nextSelections);
+  });
+};
+
 const loadData = async () => {
   const response = await fetch(buildDataUrl(), {
     cache: "no-store",
@@ -316,14 +348,42 @@ const loadData = async () => {
   return rows;
 };
 
+const getDataSignature = (rows) => {
+  if (!rows.length) {
+    return "0";
+  }
+  const lastRow = rows[rows.length - 1];
+  return `${rows.length}-${JSON.stringify(lastRow)}`;
+};
+
+const refreshData = async () => {
+  try {
+    const rows = await loadData();
+    const signature = getDataSignature(rows);
+    if (signature !== lastDataSignature) {
+      rawData = rows;
+      lastDataSignature = signature;
+      updateFilters(rawData);
+      updateDashboard();
+    }
+  } catch (error) {
+    console.error("Failed to refresh data", error);
+  }
+};
+
 const init = async () => {
   rawData = await loadData();
-  FILTER_COLUMNS.forEach((column) => {
-    buildFilter(column, uniqueValues(rawData, column));
-  });
+  lastDataSignature = getDataSignature(rawData);
+  updateFilters(rawData);
   attachFilterListeners();
   resetButton.addEventListener("click", resetFilters);
+  if (fillRecordButton) {
+    fillRecordButton.addEventListener("click", () => {
+      window.open("record-entry.html", "_blank", "noopener");
+    });
+  }
   updateDashboard();
+  window.setInterval(refreshData, 15000);
 };
 
 init();
