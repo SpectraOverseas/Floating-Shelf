@@ -20,21 +20,19 @@ const cleanValue = (value) => {
   return String(value).trim();
 };
 
-const parsePotentialDate = (value) => {
-  if (!value) {
-    return null;
-  }
-  if (value instanceof Date && !Number.isNaN(value.getTime())) {
-    return value;
-  }
-  const parsed = Date.parse(value);
-  if (!Number.isNaN(parsed)) {
-    return new Date(parsed);
-  }
-  return null;
-};
+const DATE_KEYWORDS = ["date", "month", "year", "created", "updated"];
+const FORCED_NUMBER_COLUMNS = new Set(["Parent Level Sales", "Review Count"]);
 
-const inferColumnType = (values) => {
+const inferColumnType = (header, values) => {
+  if (FORCED_NUMBER_COLUMNS.has(header)) {
+    return "number";
+  }
+
+  const headerLower = header.toLowerCase();
+  if (DATE_KEYWORDS.some((keyword) => headerLower.includes(keyword))) {
+    return "date";
+  }
+
   const sample = values.filter((value) => value !== "").slice(0, 30);
   if (!sample.length) {
     return "text";
@@ -43,11 +41,6 @@ const inferColumnType = (values) => {
   const numericValues = sample.filter((value) => !Number.isNaN(Number(value)));
   if (numericValues.length === sample.length) {
     return "number";
-  }
-
-  const dateValues = sample.filter((value) => parsePotentialDate(value));
-  if (dateValues.length / sample.length >= 0.6) {
-    return "date";
   }
 
   const uniqueValues = Array.from(new Set(sample.map((value) => cleanValue(value)))).filter(
@@ -149,6 +142,19 @@ const fetchWorkbook = async () => {
   return XLSX.read(arrayBuffer, { type: "array" });
 };
 
+const setValidationMessage = (input, fieldType) => {
+  const value = input.value.trim();
+  if (!value) {
+    input.setCustomValidity("");
+    return;
+  }
+  if (fieldType === "number" && Number.isNaN(Number(value))) {
+    input.setCustomValidity("Please enter a valid number.");
+    return;
+  }
+  input.setCustomValidity("");
+};
+
 const buildForm = (headers, rows) => {
   formFields.replaceChildren();
   headers.forEach((header, index) => {
@@ -160,35 +166,46 @@ const buildForm = (headers, rows) => {
     label.setAttribute("for", `field-${index}`);
 
     const columnValues = rows.map((row) => row[index]);
-    const fieldType = inferColumnType(columnValues);
+    const fieldType = inferColumnType(header, columnValues);
     let input;
+    let datalist;
 
     if (fieldType === "select") {
-      input = document.createElement("select");
-      const placeholder = document.createElement("option");
-      placeholder.value = "";
-      placeholder.textContent = "Select";
-      input.appendChild(placeholder);
+      input = document.createElement("input");
+      datalist = document.createElement("datalist");
+      const listId = `field-options-${index}`;
+      datalist.id = listId;
+      input.setAttribute("list", listId);
+      input.placeholder = "Select or type";
       inferSelectOptions(columnValues).forEach((optionValue) => {
         const option = document.createElement("option");
         option.value = optionValue;
-        option.textContent = optionValue;
-        input.appendChild(option);
+        datalist.appendChild(option);
       });
     } else {
       input = document.createElement("input");
       input.type = fieldType;
       if (fieldType === "date") {
         input.placeholder = "YYYY-MM-DD";
+      } else if (fieldType === "number") {
+        input.step = "any";
+        input.inputMode = "decimal";
       }
     }
 
     input.id = `field-${index}`;
     input.name = header;
     input.required = true;
+    if (fieldType === "number") {
+      fieldWrapper.classList.add("form-field--number");
+    }
+    input.addEventListener("input", () => setValidationMessage(input, fieldType));
 
     fieldWrapper.appendChild(label);
     fieldWrapper.appendChild(input);
+    if (datalist) {
+      fieldWrapper.appendChild(datalist);
+    }
     formFields.appendChild(fieldWrapper);
   });
 };
@@ -307,12 +324,18 @@ const init = async () => {
       }
     }
 
-    const inputs = Array.from(formFields.querySelectorAll("input, select"));
-    const rowValues = inputs.map((input) => input.value.trim());
-    if (rowValues.some((value) => !value)) {
-      formatMessage("Please complete all required fields.", true);
+    const inputs = Array.from(formFields.querySelectorAll("input"));
+    inputs.forEach((input) => {
+      const fieldType = input.type;
+      setValidationMessage(input, fieldType);
+    });
+    if (!form.checkValidity()) {
+      form.reportValidity();
+      formatMessage("Please correct the highlighted fields.", true);
       return;
     }
+
+    const rowValues = inputs.map((input) => input.value.trim());
 
     try {
       const workbook = await fetchWorkbook();
