@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Record Entry</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+  <main class="record-entry">
+    <header class="record-entry__header">
+      <div>
+        <p class="dashboard__eyebrow">Record Entry</p>
+        <h1>New Record</h1>
+        <p class="record-entry__subtitle">
+          Complete every field below to append a new row to Combined.xlsx → Sheet1.
+        </p>
+      </div>
+      <button class="ghost-button" type="button" id="backToDashboard">
+        Cancel / Back to Dashboard
+      </button>
+    </header>
+
+    <section class="record-entry__info" aria-live="polite">
+      <div>
+        <h2>Connection</h2>
+        <p id="connectionStatus">Loading workbook metadata…</p>
+      </div>
+      <button class="reset-button" type="button" id="manageToken">
+        Manage GitHub Token
+      </button>
+    </section>
+
+    <form class="record-entry__form" id="recordForm">
+      <div class="record-entry__grid" id="formFields"></div>
+      <div class="record-entry__actions">
+        <button class="fill-record-button" type="submit">
+          Save Record
+        </button>
+        <button class="ghost-button" type="button" id="cancelForm">
+          Cancel / Back to Dashboard
+        </button>
+      </div>
+      <p class="record-entry__message" id="formMessage" role="status"></p>
+    </form>
+  </main>
+
+  <script src="record-entry.js"></script>
+</body>
+</html>
