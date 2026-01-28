@@ -10,7 +10,7 @@ const connectionStatus = document.getElementById("connectionStatus");
 const manageTokenButton = document.getElementById("manageToken");
 const cancelButtons = [
   document.getElementById("cancelForm"),
-  document.getElementById("backToDashboard"),
+  document.getElementById("backToTableView"),
 ];
 
 const cleanValue = (value) => {
