@@ -236,8 +236,12 @@ const resetFilters = () => {
   updateDashboard();
 };
 
+const buildDataUrl = () => `${DATA_URL}?v=${Date.now()}`;
+
 const loadData = async () => {
-  const response = await fetch(DATA_URL);
+  const response = await fetch(buildDataUrl(), {
+    cache: "no-store",
+  });
   const arrayBuffer = await response.arrayBuffer();
   const workbook = XLSX.read(arrayBuffer, { type: "array" });
   const sheetName = "Sheet1";
