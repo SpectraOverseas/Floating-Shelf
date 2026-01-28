@@ -23,7 +23,8 @@ const PRICE_COLUMN_KEY = "Price  $";
 
 const filtersContainer = document.getElementById("filters");
 const resetButton = document.getElementById("resetFilters");
-const toggleGraphViewButton = document.getElementById("toggleGraphView");
+const showRecordViewButton = document.getElementById("showRecordView");
+const showGraphViewButton = document.getElementById("showGraphView");
 const tableBody = document.querySelector("[data-table-body]");
 const recordView = document.querySelector('[data-view="record"]');
 const graphView = document.querySelector('[data-view="graph"]');
@@ -1000,10 +1001,14 @@ const init = async () => {
   updateFilters(rawData);
   attachFilterListeners();
   resetButton.addEventListener("click", resetFilters);
-  if (toggleGraphViewButton) {
-    toggleGraphViewButton.addEventListener("click", () => {
-      const isGraphActive = graphView.classList.contains("is-active");
-      setActiveView(isGraphActive ? "record" : "graph");
+  if (showRecordViewButton) {
+    showRecordViewButton.addEventListener("click", () => {
+      setActiveView("record");
+    });
+  }
+  if (showGraphViewButton) {
+    showGraphViewButton.addEventListener("click", () => {
+      setActiveView("graph");
     });
   }
   await initRecordForm();
