@@ -47,6 +47,30 @@ body {
   gap: 24px;
 }
 
+.dashboard__view {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  opacity: 0;
+  transform: translateY(10px);
+  pointer-events: none;
+  max-height: 0;
+  overflow: hidden;
+  transition: opacity 0.3s ease, transform 0.3s ease, max-height 0.3s ease;
+}
+
+.dashboard__view.is-active {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+  max-height: 5000px;
+}
+
+.record-view__header h2 {
+  font-size: 1.4rem;
+  font-weight: 600;
+}
+
 .dashboard__header {
   display: flex;
   flex-wrap: wrap;
@@ -217,6 +241,28 @@ h1 {
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+.charts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.chart-card {
+  background: #fff;
+  border-radius: 18px;
+  padding: 20px;
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 320px;
+}
+
+.chart-card h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
 }
 
 .data-table__header {
