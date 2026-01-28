@@ -360,6 +360,10 @@ h1 {
   min-height: 44px;
 }
 
+.form-field--number input {
+  text-align: right;
+}
+
 .record-entry__actions {
   display: flex;
   flex-wrap: wrap;
