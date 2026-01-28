@@ -15,8 +15,21 @@ const KPI_CONFIG = [
   { key: "sellers", column: "Seller", type: "unique" },
 ];
 
+const TABLE_COLUMNS = [
+  { label: "Design", key: "Design" },
+  { label: "Seller", key: "Seller" },
+  { label: "ASIN", key: "ASIN" },
+  { label: "Pack", key: "Pack" },
+  { label: "L X W X H", key: "L X W X H" },
+  { label: "Colour", key: "Colour" },
+  { label: "Advantage", key: "Advantage" },
+  { label: "Price $", key: "Price $" },
+  { label: "ASIN Revenue", key: "ASIN Revenue" },
+];
+
 const filtersContainer = document.getElementById("filters");
 const resetButton = document.getElementById("resetFilters");
+const tableBody = document.querySelector("[data-table-body]");
 const kpiElements = new Map(
   Array.from(document.querySelectorAll("[data-kpi]")).map((el) => [
     el.dataset.kpi,
@@ -192,9 +205,30 @@ const renderKpis = (rows) => {
   });
 };
 
+const renderTable = (rows) => {
+  if (!tableBody) {
+    return;
+  }
+
+  const fragment = document.createDocumentFragment();
+
+  rows.forEach((row) => {
+    const tr = document.createElement("tr");
+    TABLE_COLUMNS.forEach((column) => {
+      const td = document.createElement("td");
+      td.textContent = cleanValue(row[column.key]);
+      tr.appendChild(td);
+    });
+    fragment.appendChild(tr);
+  });
+
+  tableBody.replaceChildren(fragment);
+};
+
 const updateDashboard = () => {
   const rows = filteredRows();
   renderKpis(rows);
+  renderTable(rows);
 };
 
 const attachFilterListeners = () => {
