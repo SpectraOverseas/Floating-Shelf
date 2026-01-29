@@ -291,20 +291,6 @@ h1 {
   min-height: 320px;
 }
 
-.chart-card--comparison {
-  min-height: 420px;
-}
-
-.chart-card__canvas {
-  width: 100% !important;
-  height: 100% !important;
-  flex: 1 1 auto;
-}
-
-.chart-card__canvas--comparison {
-  min-height: 300px;
-}
-
 .chart-card h3 {
   font-size: 1.1rem;
   font-weight: 600;
