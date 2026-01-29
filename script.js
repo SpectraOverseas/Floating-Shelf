@@ -57,6 +57,11 @@ const numberFormatter = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 2,
 });
 
+const compactNumberFormatter = new Intl.NumberFormat("en-US", {
+  notation: "compact",
+  maximumFractionDigits: 1,
+});
+
 const CHART_PALETTE = [
   "#2563eb",
   "#38bdf8",
@@ -64,14 +69,14 @@ const CHART_PALETTE = [
   "#f97316",
   "#a855f7",
   "#facc15",
-  "#0f172a",
+  "#0ea5e9",
   "#14b8a6",
   "#f472b6",
-  "#64748b",
+  "#e11d48",
 ];
 
 const COLOUR_NAME_MAP = new Map([
-  ["black", "#000000"],
+  ["black", "#111827"],
   ["white", "#ffffff"],
   ["red", "#ef4444"],
   ["blue", "#2563eb"],
@@ -81,9 +86,9 @@ const COLOUR_NAME_MAP = new Map([
   ["purple", "#a855f7"],
   ["pink", "#ec4899"],
   ["brown", "#92400e"],
-  ["grey", "#6b7280"],
-  ["gray", "#6b7280"],
-  ["silver", "#cbd5f5"],
+  ["grey", "#475569"],
+  ["gray", "#475569"],
+  ["silver", "#94a3b8"],
   ["gold", "#d4af37"],
   ["beige", "#f5f5dc"],
   ["ivory", "#fffff0"],
@@ -952,6 +957,8 @@ const buildComparisonData = (rows) => {
     }),
     backgroundColor: resolveColourSwatch(colour, index),
     borderRadius: 6,
+    barThickness: 32,
+    maxBarThickness: 44,
   }));
 
   return {
@@ -1048,11 +1055,39 @@ const renderCharts = (rows) => {
       },
       options: {
         responsive: true,
+        maintainAspectRatio: false,
         plugins: {
-          legend: { position: "bottom" },
+          legend: {
+            position: "bottom",
+            align: "start",
+            labels: {
+              boxWidth: 10,
+              boxHeight: 10,
+              padding: 10,
+              usePointStyle: true,
+              pointStyle: "rectRounded",
+              font: {
+                size: 11,
+              },
+            },
+          },
           tooltip: {
             enabled: false,
             external: comparisonTooltipHandler,
+          },
+        },
+        layout: {
+          padding: {
+            top: 8,
+            right: 12,
+            bottom: 0,
+            left: 8,
+          },
+        },
+        datasets: {
+          bar: {
+            categoryPercentage: 0.7,
+            barPercentage: 0.9,
           },
         },
         scales: {
@@ -1061,15 +1096,34 @@ const renderCharts = (rows) => {
               display: true,
               text: "Seller",
             },
+            ticks: {
+              minRotation: 30,
+              maxRotation: 45,
+              font: {
+                size: 12,
+              },
+              padding: 6,
+              autoSkip: false,
+            },
+            grid: {
+              display: false,
+            },
             stacked: true,
           },
           y: {
             title: {
               display: true,
-              text: "Total ASIN Revenue",
+              text: "Total ASIN Revenue ($)",
             },
             ticks: {
-              callback: (value) => numberFormatter.format(value),
+              callback: (value) => compactNumberFormatter.format(value),
+              font: {
+                size: 12,
+              },
+              padding: 6,
+            },
+            grid: {
+              color: "rgba(148, 163, 184, 0.35)",
             },
             stacked: true,
           },
