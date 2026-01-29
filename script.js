@@ -57,6 +57,27 @@ const numberFormatter = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 2,
 });
 
+const hexToRgba = (hex, alpha) => {
+  if (!hex) {
+    return `rgba(0, 0, 0, ${alpha})`;
+  }
+  let sanitized = hex.replace("#", "");
+  if (sanitized.length === 3) {
+    sanitized = sanitized
+      .split("")
+      .map((char) => char + char)
+      .join("");
+  }
+  const value = Number.parseInt(sanitized, 16);
+  if (Number.isNaN(value)) {
+    return `rgba(0, 0, 0, ${alpha})`;
+  }
+  const red = (value >> 16) & 255;
+  const green = (value >> 8) & 255;
+  const blue = value & 255;
+  return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+};
+
 const cleanValue = (value) => {
   if (value === null || value === undefined) {
     return "";
@@ -730,7 +751,7 @@ const buildChartCard = (canvas, config) => {
 
 const buildBubbleChartData = (rows) => {
   if (!rows.length) {
-    return { datasets: [] };
+    return { datasets: [], xMax: 0, yMax: 0 };
   }
   const columns = Object.keys(rows[0]);
   const priceColumn =
@@ -758,42 +779,81 @@ const buildBubbleChartData = (rows) => {
     ) || fulfillmentColumn;
 
   if (!priceColumn || !revenueColumn || !reviewCountColumn) {
-    return { datasets: [] };
+    return { datasets: [], xMax: 0, yMax: 0 };
   }
 
-  const sizes = rows
-    .map((row) => parseNumericValue(row[reviewCountColumn]) ?? 0)
-    .filter((value) => Number.isFinite(value));
-  const minSize = Math.min(...sizes, 0);
-  const maxSize = Math.max(...sizes, 0);
+  const palette = [
+    "#2563eb",
+    "#38bdf8",
+    "#22c55e",
+    "#f97316",
+    "#a855f7",
+    "#facc15",
+  ];
+  const MAX_BUBBLE_POINTS = 80;
+  const preparedRows = rows
+    .map((row) => {
+      const priceValue = parseNumericValue(row[priceColumn]);
+      const revenueValue = parseNumericValue(row[revenueColumn]);
+      if (priceValue === null || revenueValue === null) {
+        return null;
+      }
+      const reviewCount = parseNumericValue(row[reviewCountColumn]) ?? 0;
+      return {
+        row,
+        priceValue,
+        revenueValue,
+        reviewCount,
+      };
+    })
+    .filter(Boolean);
 
+  if (!preparedRows.length) {
+    return { datasets: [], xMax: 0, yMax: 0 };
+  }
+
+  const displayRows =
+    preparedRows.length > MAX_BUBBLE_POINTS
+      ? [...preparedRows]
+          .sort((a, b) => b.revenueValue - a.revenueValue)
+          .slice(0, MAX_BUBBLE_POINTS)
+      : preparedRows;
+
+  const reviewSizes = displayRows.map((entry) =>
+    Math.sqrt(Math.max(entry.reviewCount, 0))
+  );
+  const minSize = Math.min(...reviewSizes, 0);
+  const maxSize = Math.max(...reviewSizes, 0);
   const sizeRange = maxSize - minSize || 1;
-  const minRadius = 4;
-  const maxRadius = 18;
+  const minRadius = 6;
+  const maxRadius = 25;
 
-  const palette = ["#2563eb", "#38bdf8", "#22c55e", "#f97316", "#a855f7", "#facc15"];
+  const maxPrice = Math.max(
+    ...displayRows.map((entry) => entry.priceValue),
+    0
+  );
+  const maxRevenue = Math.max(
+    ...displayRows.map((entry) => entry.revenueValue),
+    0
+  );
+
   const groups = new Map();
-  rows.forEach((row) => {
-    const priceValue = parseNumericValue(row[priceColumn]);
-    const revenueValue = parseNumericValue(row[revenueColumn]);
-    if (priceValue === null || revenueValue === null) {
-      return;
-    }
-    const reviewCount = parseNumericValue(row[reviewCountColumn]) ?? 0;
-    const normalized = (reviewCount - minSize) / sizeRange;
+  displayRows.forEach((entry) => {
+    const normalized =
+      (Math.sqrt(Math.max(entry.reviewCount, 0)) - minSize) / sizeRange;
     const radius = minRadius + normalized * (maxRadius - minRadius);
-    const groupLabel = cleanValue(row[groupColumn]) || "Unknown";
+    const groupLabel = cleanValue(entry.row[groupColumn]) || "Unknown";
     const point = {
-      x: priceValue,
-      y: revenueValue,
+      x: entry.priceValue,
+      y: entry.revenueValue,
       r: radius,
-      asin: cleanValue(row[asinColumn]),
-      seller: cleanValue(row[sellerColumn]),
-      price: priceValue,
-      revenue: revenueValue,
-      ratings: cleanValue(row[ratingsColumn]),
-      reviewCount,
-      fulfillment: cleanValue(row[fulfillmentColumn]),
+      asin: cleanValue(entry.row[asinColumn]),
+      seller: cleanValue(entry.row[sellerColumn]),
+      price: entry.priceValue,
+      revenue: entry.revenueValue,
+      ratings: cleanValue(entry.row[ratingsColumn]),
+      reviewCount: entry.reviewCount,
+      fulfillment: cleanValue(entry.row[fulfillmentColumn]),
     };
     if (!groups.has(groupLabel)) {
       groups.set(groupLabel, []);
@@ -802,14 +862,21 @@ const buildBubbleChartData = (rows) => {
   });
 
   const datasets = Array.from(groups.entries()).map(([label, data], index) => {
+    const color = palette[index % palette.length];
     return {
       label,
       data,
-      backgroundColor: palette[index % palette.length],
+      backgroundColor: hexToRgba(color, 0.6),
+      borderColor: hexToRgba(color, 0.9),
+      borderWidth: 1,
     };
   });
 
-  return { datasets };
+  return {
+    datasets,
+    xMax: maxPrice + 10,
+    yMax: maxRevenue * 1.15,
+  };
 };
 
 const buildComparisonData = (rows) => {
@@ -988,6 +1055,8 @@ const renderCharts = (rows) => {
         },
         scales: {
           x: {
+            min: 0,
+            max: bubbleData.xMax,
             title: {
               display: true,
               text: "Product Price ($)",
@@ -997,6 +1066,8 @@ const renderCharts = (rows) => {
             },
           },
           y: {
+            min: 0,
+            max: bubbleData.yMax,
             title: {
               display: true,
               text: "ASIN Revenue ($)",
@@ -1010,6 +1081,10 @@ const renderCharts = (rows) => {
     });
   } else {
     trendChart.data.datasets = bubbleData.datasets;
+    trendChart.options.scales.x.min = 0;
+    trendChart.options.scales.x.max = bubbleData.xMax;
+    trendChart.options.scales.y.min = 0;
+    trendChart.options.scales.y.max = bubbleData.yMax;
     trendChart.update();
   }
 
