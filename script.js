@@ -57,6 +57,11 @@ const numberFormatter = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 2,
 });
 
+const compactNumberFormatter = new Intl.NumberFormat("en-US", {
+  notation: "compact",
+  maximumFractionDigits: 1,
+});
+
 const CHART_PALETTE = [
   "#2563eb",
   "#38bdf8",
@@ -64,15 +69,16 @@ const CHART_PALETTE = [
   "#f97316",
   "#a855f7",
   "#facc15",
-  "#0f172a",
+  "#475569",
   "#14b8a6",
   "#f472b6",
   "#64748b",
 ];
 
 const COLOUR_NAME_MAP = new Map([
-  ["black", "#000000"],
-  ["white", "#ffffff"],
+  ["matte black", "#374151"],
+  ["black", "#2f2f2f"],
+  ["white", "#e5e7eb"],
   ["red", "#ef4444"],
   ["blue", "#2563eb"],
   ["green", "#22c55e"],
@@ -81,9 +87,9 @@ const COLOUR_NAME_MAP = new Map([
   ["purple", "#a855f7"],
   ["pink", "#ec4899"],
   ["brown", "#92400e"],
-  ["grey", "#6b7280"],
-  ["gray", "#6b7280"],
-  ["silver", "#cbd5f5"],
+  ["grey", "#9ca3af"],
+  ["gray", "#9ca3af"],
+  ["silver", "#d1d5db"],
   ["gold", "#d4af37"],
   ["beige", "#f5f5dc"],
   ["ivory", "#fffff0"],
@@ -114,6 +120,28 @@ const cleanValue = (value) => {
     return "";
   }
   return String(value).trim();
+};
+
+const wrapChartLabel = (label, maxLength = 14) => {
+  const words = String(label).split(" ");
+  if (words.length === 1 && label.length <= maxLength) {
+    return label;
+  }
+  const lines = [];
+  let current = "";
+  words.forEach((word) => {
+    const next = current ? `${current} ${word}` : word;
+    if (next.length > maxLength && current) {
+      lines.push(current);
+      current = word;
+    } else {
+      current = next;
+    }
+  });
+  if (current) {
+    lines.push(current);
+  }
+  return lines;
 };
 
 const DATE_KEYWORDS = ["date", "month", "year", "created", "updated"];
@@ -951,6 +979,8 @@ const buildComparisonData = (rows) => {
       return sellerData?.colours.get(colour) ?? 0;
     }),
     backgroundColor: resolveColourSwatch(colour, index),
+    barThickness: 28,
+    maxBarThickness: 36,
     borderRadius: 6,
   }));
 
@@ -1048,8 +1078,27 @@ const renderCharts = (rows) => {
       },
       options: {
         responsive: true,
+        maintainAspectRatio: false,
+        layout: {
+          padding: {
+            top: 12,
+            right: 12,
+            bottom: 24,
+            left: 8,
+          },
+        },
         plugins: {
-          legend: { position: "bottom" },
+          legend: {
+            position: "bottom",
+            labels: {
+              boxWidth: 16,
+              boxHeight: 16,
+              padding: 16,
+              font: {
+                size: 12,
+              },
+            },
+          },
           tooltip: {
             enabled: false,
             external: comparisonTooltipHandler,
@@ -1061,15 +1110,39 @@ const renderCharts = (rows) => {
               display: true,
               text: "Seller",
             },
+            ticks: {
+              maxRotation: 45,
+              minRotation: 30,
+              padding: 8,
+              autoSkip: true,
+              maxTicksLimit: 10,
+              callback: (value) =>
+                wrapChartLabel(comparisonData.labels[value] ?? value),
+              font: {
+                size: 12,
+              },
+            },
+            grid: {
+              display: false,
+            },
             stacked: true,
+            categoryPercentage: 0.7,
+            barPercentage: 0.85,
           },
           y: {
             title: {
               display: true,
-              text: "Total ASIN Revenue",
+              text: "Total ASIN Revenue ($)",
+            },
+            grid: {
+              display: true,
+              color: "rgba(148, 163, 184, 0.35)",
             },
             ticks: {
-              callback: (value) => numberFormatter.format(value),
+              callback: (value) => compactNumberFormatter.format(value),
+              font: {
+                size: 12,
+              },
             },
             stacked: true,
           },
