@@ -940,8 +940,10 @@ const buildComparisonData = (rows) => {
   const sorted = Array.from(sellerTotals.entries()).sort(
     (a, b) => b[1].total - a[1].total
   );
-  const labels = sorted.map(([label]) => label);
-  const sellerLookup = new Map(sorted);
+  const maxSellers = Math.min(sorted.length, 10);
+  const topEntries = sorted.slice(0, maxSellers);
+  const labels = topEntries.map(([label]) => label);
+  const sellerLookup = new Map(topEntries);
 
   const colours = Array.from(colourTotals.entries())
     .sort((a, b) => b[1] - a[1])
@@ -955,6 +957,8 @@ const buildComparisonData = (rows) => {
     }),
     backgroundColor: resolveColourSwatch(colour, index),
     borderRadius: 6,
+    barThickness: 32,
+    maxBarThickness: 44,
   }));
 
   return {
@@ -1055,15 +1059,16 @@ const renderCharts = (rows) => {
         plugins: {
           legend: {
             position: "bottom",
+            align: "start",
             labels: {
               boxWidth: 10,
               boxHeight: 10,
+              padding: 10,
               usePointStyle: true,
-              pointStyle: "circle",
+              pointStyle: "rectRounded",
               font: {
-                size: 10,
+                size: 11,
               },
-              padding: 8,
             },
           },
           tooltip: {
@@ -1074,17 +1079,15 @@ const renderCharts = (rows) => {
         layout: {
           padding: {
             top: 8,
-            right: 0,
-            bottom: 16,
-            left: 0,
+            right: 12,
+            bottom: 0,
+            left: 8,
           },
         },
         datasets: {
           bar: {
             categoryPercentage: 0.7,
-            barPercentage: 0.8,
-            barThickness: "flex",
-            maxBarThickness: 40,
+            barPercentage: 0.9,
           },
         },
         scales: {
@@ -1093,15 +1096,13 @@ const renderCharts = (rows) => {
               display: true,
               text: "Seller",
             },
-            offset: true,
             ticks: {
               minRotation: 30,
-              maxRotation: 30,
-              align: "end",
+              maxRotation: 45,
               font: {
-                size: 10,
+                size: 12,
               },
-              padding: 8,
+              padding: 6,
               autoSkip: false,
             },
             grid: {
