@@ -293,6 +293,12 @@ h1 {
 
 .chart-card--comparison {
   min-height: 420px;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.chart-card--comparison > header {
+  padding: 0 20px;
 }
 
 .chart-card__canvas {
@@ -302,7 +308,9 @@ h1 {
 }
 
 .chart-card__canvas--comparison {
-  min-height: 300px;
+  min-height: 320px;
+  width: 100% !important;
+  margin: 0;
 }
 
 .chart-card h3 {
