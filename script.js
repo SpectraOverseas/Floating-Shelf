@@ -39,7 +39,7 @@ const formFields = document.getElementById("formFields");
 const formMessage = document.getElementById("formMessage");
 const connectionStatus = document.getElementById("connectionStatus");
 const manageTokenButton = document.getElementById("manageToken");
-const trendChartCanvas = document.getElementById("trendChart");
+const scatterChartCanvas = document.getElementById("scatterChart");
 const comparisonChartCanvas = document.getElementById("comparisonChart");
 const distributionChartCanvas = document.getElementById("distributionChart");
 const kpiElements = new Map(
@@ -375,23 +375,7 @@ const findColumnByKeywords = (columns, keywords) => {
   return "";
 };
 
-const parseDateValue = (value) => {
-  if (!value) {
-    return null;
-  }
-  const raw = cleanValue(value);
-  const parsed = Date.parse(raw);
-  if (!Number.isNaN(parsed)) {
-    return new Date(parsed);
-  }
-  const asNumber = Number(raw);
-  if (!Number.isNaN(asNumber)) {
-    return new Date(asNumber, 0, 1);
-  }
-  return null;
-};
-
-let trendChart;
+let scatterChart;
 let comparisonChart;
 let distributionChart;
 const parseNumericValue = (value) => {
@@ -728,42 +712,99 @@ const buildChartCard = (canvas, config) => {
   return new Chart(canvas, config);
 };
 
-const buildTrendData = (rows) => {
+const buildScatterData = (rows) => {
   if (!rows.length) {
-    return { labels: [], values: [] };
+    return { datasets: [], xLabel: "", yLabel: "", categoryLabel: "" };
   }
   const columns = Object.keys(rows[0]);
-  const dateColumn = findColumnByKeywords(columns, DATE_KEYWORDS);
-  const valueColumn = findColumnByKeywords(columns, [
-    "revenue",
-    "price",
-    "sales",
-    "units",
-  ]);
-  if (!dateColumn || !valueColumn) {
-    return { labels: [], values: [] };
+  const priceColumn =
+    columns.find(
+      (column) => column.toLowerCase() === PRICE_COLUMN_KEY.toLowerCase()
+    ) || findColumnByKeywords(columns, ["price"]);
+  const ratingColumn = findColumnByKeywords(columns, ["rating"]);
+  if (!priceColumn || !ratingColumn) {
+    return { datasets: [], xLabel: "", yLabel: "", categoryLabel: "" };
   }
 
-  const grouped = new Map();
+  const fulfillmentColumn = findColumnByKeywords(columns, [
+    "fulfillment",
+    "fulfilment",
+  ]);
+  const countryColumn = columns.find(
+    (column) => column.toLowerCase() === "seller country/region"
+  );
+  const categoryColumn = fulfillmentColumn || countryColumn;
+  const categoryLabel = categoryColumn
+    ? `${categoryColumn} segments`
+    : "Segments";
+
+  const asinColumn = columns.find(
+    (column) => column.toLowerCase() === "asin"
+  );
+  const sellerColumn = columns.find(
+    (column) => column.toLowerCase() === "seller"
+  );
+  const reviewCountColumn = findColumnByKeywords(columns, ["review count"]);
+  const revenueColumn = columns.find(
+    (column) => column.toLowerCase() === "asin revenue"
+  );
+
+  const pointsByCategory = new Map();
   rows.forEach((row) => {
-    const dateValue = cleanValue(row[dateColumn]);
-    const parsedDate = parseDateValue(dateValue);
-    if (!dateValue || !parsedDate) {
+    const price = parseNumericValue(row[priceColumn]);
+    const rating = parseNumericValue(row[ratingColumn]);
+    if (price === null || rating === null) {
       return;
     }
-    const label = dateValue;
-    const current = grouped.get(label) || { total: 0, date: parsedDate };
-    const value = parseNumericValue(row[valueColumn]) ?? 0;
-    grouped.set(label, { total: current.total + value, date: parsedDate });
+    const category = categoryColumn
+      ? cleanValue(row[categoryColumn]) || "Unspecified"
+      : "All";
+    const entry = pointsByCategory.get(category) || [];
+    entry.push({
+      x: price,
+      y: rating,
+      asin: asinColumn ? cleanValue(row[asinColumn]) : "",
+      seller: sellerColumn ? cleanValue(row[sellerColumn]) : "",
+      price,
+      ratings: rating,
+      reviewCount: reviewCountColumn
+        ? parseNumericValue(row[reviewCountColumn])
+        : null,
+      revenue: revenueColumn ? parseNumericValue(row[revenueColumn]) : null,
+    });
+    pointsByCategory.set(category, entry);
   });
 
-  const entries = Array.from(grouped.entries()).sort((a, b) => {
-    return a[1].date - b[1].date;
-  });
+  const palette = [
+    "#2563eb",
+    "#10b981",
+    "#f97316",
+    "#a855f7",
+    "#14b8a6",
+    "#f43f5e",
+    "#eab308",
+    "#0ea5e9",
+  ];
+
+  const datasets = Array.from(pointsByCategory.entries()).map(
+    ([category, points], index) => {
+      const color = palette[index % palette.length];
+      return {
+        label: category,
+        data: points,
+        backgroundColor: color,
+        borderColor: color,
+        pointRadius: 5,
+        pointHoverRadius: 7,
+      };
+    }
+  );
 
   return {
-    labels: entries.map(([label]) => label),
-    values: entries.map(([, entry]) => entry.total),
+    datasets,
+    xLabel: "Product Price ($)",
+    yLabel: "Customer Ratings",
+    categoryLabel,
   };
 };
 
@@ -897,51 +938,107 @@ const buildDistributionData = (rows) => {
 };
 
 const renderCharts = (rows) => {
-  if (!trendChartCanvas || !comparisonChartCanvas || !distributionChartCanvas) {
+  if (
+    !scatterChartCanvas ||
+    !comparisonChartCanvas ||
+    !distributionChartCanvas
+  ) {
     return;
   }
 
-  const trendData = buildTrendData(rows);
+  const scatterData = buildScatterData(rows);
   const comparisonData = buildComparisonData(rows);
   const distributionData = buildDistributionData(rows);
   const comparisonTooltipDetails = buildComparisonTooltipData(rows);
 
-  if (!trendChart) {
-    trendChart = buildChartCard(trendChartCanvas, {
-      type: "line",
+  if (!scatterChart) {
+    scatterChart = buildChartCard(scatterChartCanvas, {
+      type: "scatter",
       data: {
-        labels: trendData.labels,
-        datasets: [
-          {
-            label: "Trend",
-            data: trendData.values,
-            borderColor: "#2563eb",
-            backgroundColor: "rgba(37, 99, 235, 0.2)",
-            tension: 0.3,
-            fill: true,
-            pointRadius: 3,
-          },
-        ],
+        datasets: scatterData.datasets,
       },
       options: {
         responsive: true,
+        maintainAspectRatio: false,
         plugins: {
-          legend: { display: false },
-          tooltip: { mode: "index", intersect: false },
+          legend: { position: "bottom" },
+          tooltip: {
+            callbacks: {
+              title: () => "",
+              label: (context) => {
+                const point = context.raw || {};
+                const price = Number.isFinite(point.price) ? point.price : 0;
+                const ratings = Number.isFinite(point.ratings)
+                  ? point.ratings
+                  : 0;
+                const reviewCount = Number.isFinite(point.reviewCount)
+                  ? point.reviewCount
+                  : null;
+                const revenue = Number.isFinite(point.revenue)
+                  ? point.revenue
+                  : null;
+                const formattedPrice = new Intl.NumberFormat("en-US", {
+                  style: "currency",
+                  currency: "USD",
+                  maximumFractionDigits: 2,
+                }).format(price);
+                const formattedRevenue =
+                  revenue !== null
+                    ? new Intl.NumberFormat("en-US", {
+                        style: "currency",
+                        currency: "USD",
+                        maximumFractionDigits: 2,
+                      }).format(revenue)
+                    : "N/A";
+                const formattedReviews =
+                  reviewCount !== null
+                    ? numberFormatter.format(reviewCount)
+                    : "N/A";
+                return [
+                  `ASIN: ${point.asin || "N/A"}`,
+                  `Seller: ${point.seller || "N/A"}`,
+                  `Price: ${formattedPrice}`,
+                  `Ratings: ${ratings.toFixed(2)}`,
+                  `Review Count: ${formattedReviews}`,
+                  `ASIN Revenue: ${formattedRevenue}`,
+                ];
+              },
+            },
+          },
         },
         scales: {
-          y: {
+          x: {
+            title: {
+              display: true,
+              text: scatterData.xLabel,
+            },
+            grid: {
+              color: "rgba(148, 163, 184, 0.25)",
+            },
             ticks: {
               callback: (value) => numberFormatter.format(value),
+            },
+          },
+          y: {
+            title: {
+              display: true,
+              text: scatterData.yLabel,
+            },
+            min: 0,
+            max: 5,
+            grid: {
+              color: "rgba(148, 163, 184, 0.25)",
+            },
+            ticks: {
+              stepSize: 1,
             },
           },
         },
       },
     });
   } else {
-    trendChart.data.labels = trendData.labels;
-    trendChart.data.datasets[0].data = trendData.values;
-    trendChart.update();
+    scatterChart.data.datasets = scatterData.datasets;
+    scatterChart.update();
   }
 
   if (!comparisonChart) {
