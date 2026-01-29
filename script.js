@@ -856,7 +856,7 @@ const renderCharts = (rows) => {
           {
             label: comparisonData.valueLabel || "Totals",
             data: comparisonData.values,
-            backgroundColor: "#0f172a",
+            backgroundColor: ["#1E3A8A", "#3B82F6", "#10B981"],
             borderRadius: 8,
           },
         ],
