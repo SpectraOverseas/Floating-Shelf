@@ -78,6 +78,27 @@ const hexToRgba = (hex, alpha) => {
   return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
 };
 
+const hashString = (value) => {
+  if (!value) {
+    return 0;
+  }
+  let hash = 0;
+  for (let i = 0; i < value.length; i += 1) {
+    hash = (hash << 5) - hash + value.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+};
+
+const applyHorizontalJitter = (value, seed, jitterPercent = 0.02) => {
+  if (!value || !seed) {
+    return value;
+  }
+  const normalized = (hashString(seed) % 2001) / 2000;
+  const offset = (normalized - 0.5) * 2 * jitterPercent;
+  return value * (1 + offset);
+};
+
 const cleanValue = (value) => {
   if (value === null || value === undefined) {
     return "";
@@ -825,8 +846,8 @@ const buildBubbleChartData = (rows) => {
   const minSize = Math.min(...reviewSizes, 0);
   const maxSize = Math.max(...reviewSizes, 0);
   const sizeRange = maxSize - minSize || 1;
-  const minRadius = 6;
-  const maxRadius = 25;
+  const minRadius = 5;
+  const maxRadius = 20;
 
   const maxPrice = Math.max(
     ...displayRows.map((entry) => entry.priceValue),
@@ -843,8 +864,13 @@ const buildBubbleChartData = (rows) => {
       (Math.sqrt(Math.max(entry.reviewCount, 0)) - minSize) / sizeRange;
     const radius = minRadius + normalized * (maxRadius - minRadius);
     const groupLabel = cleanValue(entry.row[groupColumn]) || "Unknown";
+    const jitterSeed =
+      cleanValue(entry.row[asinColumn]) ||
+      cleanValue(entry.row[sellerColumn]) ||
+      String(entry.priceValue);
+    const jitteredPrice = applyHorizontalJitter(entry.priceValue, jitterSeed);
     const point = {
-      x: entry.priceValue,
+      x: jitteredPrice,
       y: entry.revenueValue,
       r: radius,
       asin: cleanValue(entry.row[asinColumn]),
@@ -1027,7 +1053,10 @@ const renderCharts = (rows) => {
       options: {
         responsive: true,
         plugins: {
-          legend: { position: "bottom" },
+          legend: {
+            position: "bottom",
+            align: "center",
+          },
           tooltip: {
             callbacks: {
               title: (items) => {
@@ -1066,11 +1095,12 @@ const renderCharts = (rows) => {
             },
           },
           y: {
-            min: 0,
+            type: "logarithmic",
+            min: 1,
             max: bubbleData.yMax,
             title: {
               display: true,
-              text: "ASIN Revenue ($)",
+              text: "ASIN Revenue (Log Scale)",
             },
             ticks: {
               callback: (value) => numberFormatter.format(value),
@@ -1083,7 +1113,8 @@ const renderCharts = (rows) => {
     trendChart.data.datasets = bubbleData.datasets;
     trendChart.options.scales.x.min = 0;
     trendChart.options.scales.x.max = bubbleData.xMax;
-    trendChart.options.scales.y.min = 0;
+    trendChart.options.scales.y.type = "logarithmic";
+    trendChart.options.scales.y.min = 1;
     trendChart.options.scales.y.max = bubbleData.yMax;
     trendChart.update();
   }
