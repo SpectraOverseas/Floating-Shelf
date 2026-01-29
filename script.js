@@ -1026,6 +1026,26 @@ const renderCharts = (rows) => {
         responsive: true,
         plugins: {
           legend: { position: "bottom" },
+          title: {
+            display: true,
+            text: "ASIN Distribution by Country",
+            position: "top",
+            align: "center",
+            font: {
+              family: "Inter, system-ui, sans-serif",
+              size: 16,
+              weight: "600",
+            },
+            padding: {
+              top: 8,
+              bottom: 16,
+            },
+          },
+        },
+        layout: {
+          padding: {
+            top: 8,
+          },
         },
       },
     });
