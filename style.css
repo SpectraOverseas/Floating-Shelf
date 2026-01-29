@@ -291,6 +291,14 @@ h1 {
   min-height: 320px;
 }
 
+.chart-card--scatter {
+  min-height: 420px;
+}
+
+.chart-card--scatter canvas {
+  height: 300px;
+}
+
 .chart-card h3 {
   font-size: 1.1rem;
   font-weight: 600;
