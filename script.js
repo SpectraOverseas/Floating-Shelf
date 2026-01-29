@@ -763,6 +763,69 @@ const buildComparisonData = (rows) => {
   };
 };
 
+const buildComparisonTooltipData = (rows) => {
+  if (!rows.length) {
+    return new Map();
+  }
+  const columns = Object.keys(rows[0]);
+  const valueColumn = columns.find(
+    (column) => column.toLowerCase() === "asin revenue"
+  );
+  const categoryColumn = columns.find(
+    (column) => column.toLowerCase() === "seller"
+  );
+  const advantageColumn = columns.find(
+    (column) => column.toLowerCase() === "advantage"
+  );
+  if (!valueColumn || !categoryColumn) {
+    return new Map();
+  }
+
+  const details = new Map();
+  rows.forEach((row) => {
+    const seller = cleanValue(row[categoryColumn]);
+    if (!seller) {
+      return;
+    }
+    const value = parseNumericValue(row[valueColumn]) ?? 0;
+    const entry = details.get(seller) || {
+      total: 0,
+      advantageCounts: new Map(),
+      firstAdvantage: "",
+    };
+    entry.total += value;
+    if (advantageColumn) {
+      const advantage = cleanValue(row[advantageColumn]);
+      if (advantage) {
+        if (!entry.firstAdvantage) {
+          entry.firstAdvantage = advantage;
+        }
+        entry.advantageCounts.set(
+          advantage,
+          (entry.advantageCounts.get(advantage) || 0) + 1
+        );
+      }
+    }
+    details.set(seller, entry);
+  });
+  return details;
+};
+
+const resolveAdvantageValue = (entry) => {
+  if (!entry) {
+    return "";
+  }
+  let topAdvantage = "";
+  let topCount = -1;
+  entry.advantageCounts.forEach((count, advantage) => {
+    if (count > topCount) {
+      topAdvantage = advantage;
+      topCount = count;
+    }
+  });
+  return topAdvantage || entry.firstAdvantage || "";
+};
+
 const buildDistributionData = (rows) => {
   if (!rows.length) {
     return { labels: [], values: [], valueLabel: "" };
@@ -802,6 +865,7 @@ const renderCharts = (rows) => {
   const trendData = buildTrendData(rows);
   const comparisonData = buildComparisonData(rows);
   const distributionData = buildDistributionData(rows);
+  const comparisonTooltipDetails = buildComparisonTooltipData(rows);
 
   if (!trendChart) {
     trendChart = buildChartCard(trendChartCanvas, {
@@ -857,7 +921,31 @@ const renderCharts = (rows) => {
       },
       options: {
         responsive: true,
-        plugins: { legend: { display: false } },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              title: () => "",
+              label: (context) => {
+                const seller = context.label || "";
+                const details = context.chart.$comparisonTooltipDetails;
+                const entry = details ? details.get(seller) : null;
+                const revenue = entry ? entry.total : context.parsed.y ?? 0;
+                const advantage = resolveAdvantageValue(entry);
+                const formattedRevenue = new Intl.NumberFormat("en-US", {
+                  style: "currency",
+                  currency: "USD",
+                  maximumFractionDigits: 2,
+                }).format(revenue ?? 0);
+                return [
+                  `Seller: ${seller || "N/A"}`,
+                  `ASIN Revenue: ${formattedRevenue}`,
+                  `Advantage: ${advantage || "N/A"}`,
+                ];
+              },
+            },
+          },
+        },
         scales: {
           y: {
             ticks: {
@@ -867,9 +955,11 @@ const renderCharts = (rows) => {
         },
       },
     });
+    comparisonChart.$comparisonTooltipDetails = comparisonTooltipDetails;
   } else {
     comparisonChart.data.labels = comparisonData.labels;
     comparisonChart.data.datasets[0].data = comparisonData.values;
+    comparisonChart.$comparisonTooltipDetails = comparisonTooltipDetails;
     comparisonChart.update();
   }
 
