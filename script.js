@@ -26,6 +26,9 @@ const resetButton = document.getElementById("resetFilters");
 const showRecordViewButton = document.getElementById("showRecordView");
 const showGraphViewButton = document.getElementById("showGraphView");
 const showTableViewButton = document.getElementById("showTableView");
+const showTableViewFromRecordButton = document.getElementById(
+  "showTableViewFromRecord"
+);
 const tableBody = document.querySelector("[data-table-body]");
 const recordView = document.querySelector('[data-view="record"]');
 const graphView = document.querySelector('[data-view="graph"]');
@@ -1026,6 +1029,11 @@ const init = async () => {
   }
   if (showTableViewButton) {
     showTableViewButton.addEventListener("click", () => {
+      setActiveView("table");
+    });
+  }
+  if (showTableViewFromRecordButton) {
+    showTableViewFromRecordButton.addEventListener("click", () => {
       setActiveView("table");
     });
   }
