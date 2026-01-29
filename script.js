@@ -39,7 +39,7 @@ const formFields = document.getElementById("formFields");
 const formMessage = document.getElementById("formMessage");
 const connectionStatus = document.getElementById("connectionStatus");
 const manageTokenButton = document.getElementById("manageToken");
-const scatterChartCanvas = document.getElementById("scatterChart");
+const trendChartCanvas = document.getElementById("trendChart");
 const comparisonChartCanvas = document.getElementById("comparisonChart");
 const distributionChartCanvas = document.getElementById("distributionChart");
 const kpiElements = new Map(
@@ -375,7 +375,23 @@ const findColumnByKeywords = (columns, keywords) => {
   return "";
 };
 
-let scatterChart;
+const parseDateValue = (value) => {
+  if (!value) {
+    return null;
+  }
+  const raw = cleanValue(value);
+  const parsed = Date.parse(raw);
+  if (!Number.isNaN(parsed)) {
+    return new Date(parsed);
+  }
+  const asNumber = Number(raw);
+  if (!Number.isNaN(asNumber)) {
+    return new Date(asNumber, 0, 1);
+  }
+  return null;
+};
+
+let trendChart;
 let comparisonChart;
 let distributionChart;
 const parseNumericValue = (value) => {
@@ -712,99 +728,42 @@ const buildChartCard = (canvas, config) => {
   return new Chart(canvas, config);
 };
 
-const buildScatterData = (rows) => {
+const buildTrendData = (rows) => {
   if (!rows.length) {
-    return { datasets: [], xLabel: "", yLabel: "", categoryLabel: "" };
+    return { labels: [], values: [] };
   }
   const columns = Object.keys(rows[0]);
-  const priceColumn =
-    columns.find(
-      (column) => column.toLowerCase() === PRICE_COLUMN_KEY.toLowerCase()
-    ) || findColumnByKeywords(columns, ["price"]);
-  const ratingColumn = findColumnByKeywords(columns, ["rating"]);
-  if (!priceColumn || !ratingColumn) {
-    return { datasets: [], xLabel: "", yLabel: "", categoryLabel: "" };
+  const dateColumn = findColumnByKeywords(columns, DATE_KEYWORDS);
+  const valueColumn = findColumnByKeywords(columns, [
+    "revenue",
+    "price",
+    "sales",
+    "units",
+  ]);
+  if (!dateColumn || !valueColumn) {
+    return { labels: [], values: [] };
   }
 
-  const fulfillmentColumn = findColumnByKeywords(columns, [
-    "fulfillment",
-    "fulfilment",
-  ]);
-  const countryColumn = columns.find(
-    (column) => column.toLowerCase() === "seller country/region"
-  );
-  const categoryColumn = fulfillmentColumn || countryColumn;
-  const categoryLabel = categoryColumn
-    ? `${categoryColumn} segments`
-    : "Segments";
-
-  const asinColumn = columns.find(
-    (column) => column.toLowerCase() === "asin"
-  );
-  const sellerColumn = columns.find(
-    (column) => column.toLowerCase() === "seller"
-  );
-  const reviewCountColumn = findColumnByKeywords(columns, ["review count"]);
-  const revenueColumn = columns.find(
-    (column) => column.toLowerCase() === "asin revenue"
-  );
-
-  const pointsByCategory = new Map();
+  const grouped = new Map();
   rows.forEach((row) => {
-    const price = parseNumericValue(row[priceColumn]);
-    const rating = parseNumericValue(row[ratingColumn]);
-    if (price === null || rating === null) {
+    const dateValue = cleanValue(row[dateColumn]);
+    const parsedDate = parseDateValue(dateValue);
+    if (!dateValue || !parsedDate) {
       return;
     }
-    const category = categoryColumn
-      ? cleanValue(row[categoryColumn]) || "Unspecified"
-      : "All";
-    const entry = pointsByCategory.get(category) || [];
-    entry.push({
-      x: price,
-      y: rating,
-      asin: asinColumn ? cleanValue(row[asinColumn]) : "",
-      seller: sellerColumn ? cleanValue(row[sellerColumn]) : "",
-      price,
-      ratings: rating,
-      reviewCount: reviewCountColumn
-        ? parseNumericValue(row[reviewCountColumn])
-        : null,
-      revenue: revenueColumn ? parseNumericValue(row[revenueColumn]) : null,
-    });
-    pointsByCategory.set(category, entry);
+    const label = dateValue;
+    const current = grouped.get(label) || { total: 0, date: parsedDate };
+    const value = parseNumericValue(row[valueColumn]) ?? 0;
+    grouped.set(label, { total: current.total + value, date: parsedDate });
   });
 
-  const palette = [
-    "#2563eb",
-    "#10b981",
-    "#f97316",
-    "#a855f7",
-    "#14b8a6",
-    "#f43f5e",
-    "#eab308",
-    "#0ea5e9",
-  ];
-
-  const datasets = Array.from(pointsByCategory.entries()).map(
-    ([category, points], index) => {
-      const color = palette[index % palette.length];
-      return {
-        label: category,
-        data: points,
-        backgroundColor: color,
-        borderColor: color,
-        pointRadius: 5,
-        pointHoverRadius: 7,
-      };
-    }
-  );
+  const entries = Array.from(grouped.entries()).sort((a, b) => {
+    return a[1].date - b[1].date;
+  });
 
   return {
-    datasets,
-    xLabel: "Product Price ($)",
-    yLabel: "Customer Ratings",
-    categoryLabel,
+    labels: entries.map(([label]) => label),
+    values: entries.map(([, entry]) => entry.total),
   };
 };
 
@@ -938,107 +897,51 @@ const buildDistributionData = (rows) => {
 };
 
 const renderCharts = (rows) => {
-  if (
-    !scatterChartCanvas ||
-    !comparisonChartCanvas ||
-    !distributionChartCanvas
-  ) {
+  if (!trendChartCanvas || !comparisonChartCanvas || !distributionChartCanvas) {
     return;
   }
 
-  const scatterData = buildScatterData(rows);
+  const trendData = buildTrendData(rows);
   const comparisonData = buildComparisonData(rows);
   const distributionData = buildDistributionData(rows);
   const comparisonTooltipDetails = buildComparisonTooltipData(rows);
 
-  if (!scatterChart) {
-    scatterChart = buildChartCard(scatterChartCanvas, {
-      type: "scatter",
+  if (!trendChart) {
+    trendChart = buildChartCard(trendChartCanvas, {
+      type: "line",
       data: {
-        datasets: scatterData.datasets,
+        labels: trendData.labels,
+        datasets: [
+          {
+            label: "Trend",
+            data: trendData.values,
+            borderColor: "#2563eb",
+            backgroundColor: "rgba(37, 99, 235, 0.2)",
+            tension: 0.3,
+            fill: true,
+            pointRadius: 3,
+          },
+        ],
       },
       options: {
         responsive: true,
-        maintainAspectRatio: false,
         plugins: {
-          legend: { position: "bottom" },
-          tooltip: {
-            callbacks: {
-              title: () => "",
-              label: (context) => {
-                const point = context.raw || {};
-                const price = Number.isFinite(point.price) ? point.price : 0;
-                const ratings = Number.isFinite(point.ratings)
-                  ? point.ratings
-                  : 0;
-                const reviewCount = Number.isFinite(point.reviewCount)
-                  ? point.reviewCount
-                  : null;
-                const revenue = Number.isFinite(point.revenue)
-                  ? point.revenue
-                  : null;
-                const formattedPrice = new Intl.NumberFormat("en-US", {
-                  style: "currency",
-                  currency: "USD",
-                  maximumFractionDigits: 2,
-                }).format(price);
-                const formattedRevenue =
-                  revenue !== null
-                    ? new Intl.NumberFormat("en-US", {
-                        style: "currency",
-                        currency: "USD",
-                        maximumFractionDigits: 2,
-                      }).format(revenue)
-                    : "N/A";
-                const formattedReviews =
-                  reviewCount !== null
-                    ? numberFormatter.format(reviewCount)
-                    : "N/A";
-                return [
-                  `ASIN: ${point.asin || "N/A"}`,
-                  `Seller: ${point.seller || "N/A"}`,
-                  `Price: ${formattedPrice}`,
-                  `Ratings: ${ratings.toFixed(2)}`,
-                  `Review Count: ${formattedReviews}`,
-                  `ASIN Revenue: ${formattedRevenue}`,
-                ];
-              },
-            },
-          },
+          legend: { display: false },
+          tooltip: { mode: "index", intersect: false },
         },
         scales: {
-          x: {
-            title: {
-              display: true,
-              text: scatterData.xLabel,
-            },
-            grid: {
-              color: "rgba(148, 163, 184, 0.25)",
-            },
+          y: {
             ticks: {
               callback: (value) => numberFormatter.format(value),
-            },
-          },
-          y: {
-            title: {
-              display: true,
-              text: scatterData.yLabel,
-            },
-            min: 0,
-            max: 5,
-            grid: {
-              color: "rgba(148, 163, 184, 0.25)",
-            },
-            ticks: {
-              stepSize: 1,
             },
           },
         },
       },
     });
   } else {
-    scatterChart.data.datasets = scatterData.datasets;
-    scatterChart.update();
+    trendChart.data.labels = trendData.labels;
+    trendChart.data.datasets[0].data = trendData.values;
+    trendChart.update();
   }
 
   if (!comparisonChart) {
