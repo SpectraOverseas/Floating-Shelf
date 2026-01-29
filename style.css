@@ -296,6 +296,26 @@ h1 {
   font-weight: 600;
 }
 
+.chart-card__controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: #475569;
+}
+
+.chart-card__controls label {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-weight: 600;
+}
+
+.chart-card__controls input[type="range"] {
+  width: 100%;
+  accent-color: #2563eb;
+}
+
 .chart-tooltip {
   position: absolute;
   min-width: 200px;
