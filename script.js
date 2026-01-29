@@ -70,30 +70,6 @@ const CHART_PALETTE = [
   "#64748b",
 ];
 
-const COLOUR_SHADE_MAP = new Map([
-  ["black", { fill: "#000000" }],
-  ["matte black", { fill: "#1f2937" }],
-  ["white", { fill: "#ffffff", border: "#cbd5f5" }],
-  ["silver", { fill: "#cbd5e1" }],
-  ["gold", { fill: "#d4af37" }],
-  ["grey", { fill: "#6b7280" }],
-  ["gray", { fill: "#6b7280" }],
-]);
-
-const getColourShade = (value, index) => {
-  const normalized = cleanValue(value).toLowerCase();
-  if (COLOUR_SHADE_MAP.has(normalized)) {
-    return COLOUR_SHADE_MAP.get(normalized);
-  }
-  const matchingKey = Array.from(COLOUR_SHADE_MAP.keys()).find((key) =>
-    normalized.includes(key)
-  );
-  if (matchingKey) {
-    return COLOUR_SHADE_MAP.get(matchingKey);
-  }
-  return { fill: CHART_PALETTE[index % CHART_PALETTE.length] };
-};
-
 const cleanValue = (value) => {
   if (value === null || value === undefined) {
     return "";
@@ -935,25 +911,20 @@ const buildComparisonData = (rows) => {
     .sort((a, b) => b[1] - a[1])
     .map(([colour]) => colour);
 
-  const datasets = colours.map((colour, index) => {
-    const shade = getColourShade(colour, index);
-    return {
-      label: colour,
-      data: labels.map((seller) => {
-        const sellerData = sellerLookup.get(seller);
-        return sellerData?.colours.get(colour) ?? 0;
-      }),
-      backgroundColor: shade.fill,
-      borderColor: shade.border ?? shade.fill,
-      borderWidth: shade.border ? 1 : 0,
-      borderRadius: 6,
-    };
-  });
+  const datasets = colours.map((colour, index) => ({
+    label: colour,
+    data: labels.map((seller) => {
+      const sellerData = sellerLookup.get(seller);
+      return sellerData?.colours.get(colour) ?? 0;
+    }),
+    backgroundColor: CHART_PALETTE[index % CHART_PALETTE.length],
+    borderRadius: 6,
+  }));
 
   return {
     labels,
     datasets,
-    valueLabel: "Seller-wise ASIN Revenue by Colour",
+    valueLabel: `${valueColumn} by ${sellerColumn} & ${colourColumn}`,
   };
 };
 
