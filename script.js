@@ -42,8 +42,6 @@ const manageTokenButton = document.getElementById("manageToken");
 const trendChartCanvas = document.getElementById("trendChart");
 const comparisonChartCanvas = document.getElementById("comparisonChart");
 const distributionChartCanvas = document.getElementById("distributionChart");
-const comparisonZoomInput = document.getElementById("comparisonZoom");
-const comparisonZoomValue = document.getElementById("comparisonZoomValue");
 const kpiElements = new Map(
   Array.from(document.querySelectorAll("[data-kpi]")).map((el) => [
     el.dataset.kpi,
@@ -370,15 +368,6 @@ const parseDateValue = (value) => {
 let trendChart;
 let comparisonChart;
 let distributionChart;
-const comparisonZoomState = {
-  ratio: 1,
-  min: 0.2,
-  max: 1,
-};
-
-if (comparisonZoomInput) {
-  comparisonZoomState.ratio = Number(comparisonZoomInput.value) / 100;
-}
 const comparisonTooltipState = {
   locked: false,
   dataIndex: null,
@@ -873,7 +862,7 @@ const buildTrendData = (rows) => {
 
 const buildComparisonData = (rows) => {
   if (!rows.length) {
-    return { labels: [], datasets: [], valueLabel: "", maxTotal: 0 };
+    return { labels: [], datasets: [], valueLabel: "" };
   }
   const columns = Object.keys(rows[0]);
   const valueColumn = findColumnByKeywords(columns, [
@@ -886,7 +875,7 @@ const buildComparisonData = (rows) => {
   const sellerColumn = findColumnByKeywords(columns, ["seller"]);
   const colourColumn = findColumnByKeywords(columns, ["colour", "color"]);
   if (!valueColumn || !sellerColumn || !colourColumn) {
-    return { labels: [], datasets: [], valueLabel: "", maxTotal: 0 };
+    return { labels: [], datasets: [], valueLabel: "" };
   }
 
   const sellerTotals = new Map();
@@ -913,12 +902,10 @@ const buildComparisonData = (rows) => {
   const sorted = Array.from(sellerTotals.entries()).sort(
     (a, b) => b[1].total - a[1].total
   );
-  const maxSellers = sorted.length > 10 ? 10 : sorted.length;
+  const maxSellers = sorted.length > 5 ? 5 : sorted.length;
   const topEntries = sorted.slice(0, maxSellers);
   const labels = topEntries.map(([label]) => label);
   const sellerLookup = new Map(topEntries);
-  const totals = topEntries.map(([, entry]) => entry.total);
-  const maxTotal = totals.length ? Math.max(...totals) : 0;
 
   const colours = Array.from(colourTotals.entries())
     .sort((a, b) => b[1] - a[1])
@@ -938,45 +925,7 @@ const buildComparisonData = (rows) => {
     labels,
     datasets,
     valueLabel: `${valueColumn} by ${sellerColumn} & ${colourColumn}`,
-    maxTotal,
   };
-};
-
-const updateComparisonZoomLabel = (maxTotal) => {
-  if (!comparisonZoomValue) {
-    return;
-  }
-  const scalePercent = Math.round(comparisonZoomState.ratio * 100);
-  const scaledMax = maxTotal * comparisonZoomState.ratio;
-  comparisonZoomValue.textContent = `${scalePercent}% (${numberFormatter.format(
-    scaledMax
-  )})`;
-};
-
-const setComparisonZoomRatio = (ratio) => {
-  const clamped = Math.min(
-    comparisonZoomState.max,
-    Math.max(comparisonZoomState.min, ratio)
-  );
-  comparisonZoomState.ratio = clamped;
-  if (comparisonZoomInput) {
-    comparisonZoomInput.value = String(Math.round(clamped * 100));
-  }
-};
-
-const handleComparisonZoomWheel = (event) => {
-  if (!comparisonChart || !comparisonZoomInput) {
-    return;
-  }
-  event.preventDefault();
-  const delta = event.deltaY > 0 ? -0.05 : 0.05;
-  const nextRatio = comparisonZoomState.ratio + delta;
-  setComparisonZoomRatio(nextRatio);
-  const maxTotal = comparisonChart.options?.scales?.y?.suggestedMax ?? 0;
-  const nextMax = maxTotal ? maxTotal * comparisonZoomState.ratio : 0;
-  comparisonChart.options.scales.y.max = nextMax || undefined;
-  updateComparisonZoomLabel(maxTotal);
-  comparisonChart.update();
 };
 
 const buildDistributionData = (rows) => {
@@ -1018,8 +967,6 @@ const renderCharts = (rows) => {
   const trendData = buildTrendData(rows);
   const comparisonData = buildComparisonData(rows);
   const distributionData = buildDistributionData(rows);
-  const comparisonMax = comparisonData.maxTotal || 0;
-  const comparisonZoomMax = comparisonMax * comparisonZoomState.ratio;
 
   if (!trendChart) {
     trendChart = buildChartCard(trendChartCanvas, {
@@ -1092,22 +1039,10 @@ const renderCharts = (rows) => {
               callback: (value) => numberFormatter.format(value),
             },
             stacked: true,
-            max: comparisonZoomMax || undefined,
-            suggestedMax: comparisonMax || undefined,
           },
         },
       },
     });
-    if (comparisonZoomInput) {
-      comparisonZoomInput.addEventListener("input", (event) => {
-        const nextValue = Number(event.target.value) / 100;
-        setComparisonZoomRatio(nextValue);
-        const yMax = comparisonData.maxTotal * comparisonZoomState.ratio;
-        comparisonChart.options.scales.y.max = yMax || undefined;
-        updateComparisonZoomLabel(comparisonData.maxTotal);
-        comparisonChart.update();
-      });
-    }
     comparisonChartCanvas.addEventListener("click", (event) => {
       if (!comparisonChart) {
         return;
@@ -1141,18 +1076,11 @@ const renderCharts = (rows) => {
       }
       unlockComparisonTooltip();
     });
-    comparisonChartCanvas.addEventListener("wheel", handleComparisonZoomWheel, {
-      passive: false,
-    });
   } else {
     comparisonChart.data.labels = comparisonData.labels;
     comparisonChart.data.datasets = comparisonData.datasets;
-    comparisonChart.options.scales.y.suggestedMax = comparisonMax || undefined;
-    comparisonChart.options.scales.y.max = comparisonZoomMax || undefined;
     comparisonChart.update();
   }
-
-  updateComparisonZoomLabel(comparisonMax);
 
   if (!distributionChart) {
     distributionChart = buildChartCard(distributionChartCanvas, {
