@@ -70,45 +70,6 @@ const CHART_PALETTE = [
   "#64748b",
 ];
 
-const COLOUR_NAME_MAP = new Map([
-  ["black", "#000000"],
-  ["white", "#ffffff"],
-  ["red", "#ef4444"],
-  ["blue", "#2563eb"],
-  ["green", "#22c55e"],
-  ["yellow", "#facc15"],
-  ["orange", "#f97316"],
-  ["purple", "#a855f7"],
-  ["pink", "#ec4899"],
-  ["brown", "#92400e"],
-  ["grey", "#6b7280"],
-  ["gray", "#6b7280"],
-  ["silver", "#cbd5f5"],
-  ["gold", "#d4af37"],
-  ["beige", "#f5f5dc"],
-  ["ivory", "#fffff0"],
-  ["navy", "#1e3a8a"],
-  ["teal", "#14b8a6"],
-  ["cyan", "#06b6d4"],
-  ["magenta", "#d946ef"],
-  ["maroon", "#7f1d1d"],
-]);
-
-const resolveColourSwatch = (colour, index) => {
-  const normalized = cleanValue(colour).toLowerCase();
-  if (!normalized) {
-    return CHART_PALETTE[index % CHART_PALETTE.length];
-  }
-
-  for (const [key, value] of COLOUR_NAME_MAP.entries()) {
-    if (normalized.includes(key)) {
-      return value;
-    }
-  }
-
-  return CHART_PALETTE[index % CHART_PALETTE.length];
-};
-
 const cleanValue = (value) => {
   if (value === null || value === undefined) {
     return "";
@@ -904,9 +865,15 @@ const buildComparisonData = (rows) => {
     return { labels: [], datasets: [], valueLabel: "" };
   }
   const columns = Object.keys(rows[0]);
-  const valueColumn = columns.find((column) => column === "ASIN Revenue");
-  const sellerColumn = columns.find((column) => column === "Seller");
-  const colourColumn = columns.find((column) => column === "Colour");
+  const valueColumn = findColumnByKeywords(columns, [
+    "asin revenue",
+    "revenue",
+    "price",
+    "sales",
+    "units",
+  ]);
+  const sellerColumn = findColumnByKeywords(columns, ["seller"]);
+  const colourColumn = findColumnByKeywords(columns, ["colour", "color"]);
   if (!valueColumn || !sellerColumn || !colourColumn) {
     return { labels: [], datasets: [], valueLabel: "" };
   }
@@ -935,7 +902,7 @@ const buildComparisonData = (rows) => {
   const sorted = Array.from(sellerTotals.entries()).sort(
     (a, b) => b[1].total - a[1].total
   );
-  const maxSellers = Math.min(sorted.length, 10);
+  const maxSellers = sorted.length > 5 ? 5 : sorted.length;
   const topEntries = sorted.slice(0, maxSellers);
   const labels = topEntries.map(([label]) => label);
   const sellerLookup = new Map(topEntries);
@@ -950,7 +917,7 @@ const buildComparisonData = (rows) => {
       const sellerData = sellerLookup.get(seller);
       return sellerData?.colours.get(colour) ?? 0;
     }),
-    backgroundColor: resolveColourSwatch(colour, index),
+    backgroundColor: CHART_PALETTE[index % CHART_PALETTE.length],
     borderRadius: 6,
   }));
 
