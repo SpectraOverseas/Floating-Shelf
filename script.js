@@ -57,19 +57,6 @@ const numberFormatter = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 2,
 });
 
-const CHART_PALETTE = [
-  "#2563eb",
-  "#38bdf8",
-  "#22c55e",
-  "#f97316",
-  "#a855f7",
-  "#facc15",
-  "#0f172a",
-  "#14b8a6",
-  "#f472b6",
-  "#64748b",
-];
-
 const cleanValue = (value) => {
   if (value === null || value === undefined) {
     return "";
@@ -371,7 +358,6 @@ let distributionChart;
 const comparisonTooltipState = {
   locked: false,
   dataIndex: null,
-  datasetIndex: null,
   position: null,
 };
 const parseNumericValue = (value) => {
@@ -724,31 +710,30 @@ const getComparisonTooltipElement = () => {
 
 const updateComparisonTooltipContent = (tooltipEl, chart, dataIndex) => {
   const label = chart.data.labels?.[dataIndex] ?? "";
-  const datasetIndex = comparisonTooltipState.datasetIndex ?? 0;
-  const dataset = chart.data.datasets?.[datasetIndex];
-  const value = dataset?.data?.[dataIndex] ?? 0;
-  const colour = dataset?.label ?? "—";
+  const value = chart.data.datasets?.[0]?.data?.[dataIndex] ?? 0;
+  const advantage =
+    chart.data.datasets?.[0]?.advantages?.[dataIndex] ?? "—";
   const title = document.createElement("div");
   title.className = "chart-tooltip__title";
   title.textContent = label;
 
-  const colourRow = document.createElement("div");
-  colourRow.className = "chart-tooltip__row";
-  const colourLabel = document.createElement("span");
-  colourLabel.textContent = "Colour";
-  const colourValue = document.createElement("strong");
-  colourValue.textContent = colour;
-  colourRow.append(colourLabel, colourValue);
-
   const revenueRow = document.createElement("div");
   revenueRow.className = "chart-tooltip__row";
   const revenueLabel = document.createElement("span");
-  revenueLabel.textContent = "ASIN Revenue";
+  revenueLabel.textContent = "Total ASIN Revenue";
   const revenueValue = document.createElement("strong");
   revenueValue.textContent = numberFormatter.format(value);
   revenueRow.append(revenueLabel, revenueValue);
 
-  tooltipEl.replaceChildren(title, colourRow, revenueRow);
+  const advantageRow = document.createElement("div");
+  advantageRow.className = "chart-tooltip__row chart-tooltip__row--stacked";
+  const advantageLabel = document.createElement("span");
+  advantageLabel.textContent = "Advantage";
+  const advantageValue = document.createElement("strong");
+  advantageValue.textContent = advantage || "—";
+  advantageRow.append(advantageLabel, advantageValue);
+
+  tooltipEl.replaceChildren(title, revenueRow, advantageRow);
 };
 
 const positionComparisonTooltip = (tooltipEl, chart, position) => {
@@ -790,8 +775,6 @@ const comparisonTooltipHandler = (context) => {
   }
 
   const dataIndex = dataPoint.dataIndex;
-  const datasetIndex = dataPoint.datasetIndex ?? 0;
-  comparisonTooltipState.datasetIndex = datasetIndex;
   updateComparisonTooltipContent(tooltipEl, chart, dataIndex);
   positionComparisonTooltip(tooltipEl, chart, {
     x: tooltip.caretX,
@@ -806,7 +789,6 @@ const comparisonTooltipHandler = (context) => {
 const unlockComparisonTooltip = () => {
   comparisonTooltipState.locked = false;
   comparisonTooltipState.dataIndex = null;
-  comparisonTooltipState.datasetIndex = null;
   comparisonTooltipState.position = null;
   const tooltipEl = document.querySelector(
     '.chart-tooltip[data-tooltip="comparison"]'
@@ -862,7 +844,7 @@ const buildTrendData = (rows) => {
 
 const buildComparisonData = (rows) => {
   if (!rows.length) {
-    return { labels: [], datasets: [], valueLabel: "" };
+    return { labels: [], values: [], advantages: [], valueLabel: "" };
   }
   const columns = Object.keys(rows[0]);
   const valueColumn = findColumnByKeywords(columns, [
@@ -873,58 +855,48 @@ const buildComparisonData = (rows) => {
     "units",
   ]);
   const sellerColumn = findColumnByKeywords(columns, ["seller"]);
-  const colourColumn = findColumnByKeywords(columns, ["colour", "color"]);
-  if (!valueColumn || !sellerColumn || !colourColumn) {
-    return { labels: [], datasets: [], valueLabel: "" };
+  const advantageColumn = findColumnByKeywords(columns, ["advantage"]);
+  if (!valueColumn || !sellerColumn) {
+    return { labels: [], values: [], advantages: [], valueLabel: "" };
   }
 
-  const sellerTotals = new Map();
-  const colourTotals = new Map();
+  const totals = new Map();
   rows.forEach((row) => {
     const seller = cleanValue(row[sellerColumn]);
-    const colour = cleanValue(row[colourColumn]);
     if (!seller) {
       return;
     }
     const value = parseNumericValue(row[valueColumn]) ?? 0;
-    const existing = sellerTotals.get(seller) || {
+    const advantage = advantageColumn ? cleanValue(row[advantageColumn]) : "";
+    const existing = totals.get(seller) || {
       total: 0,
-      colours: new Map(),
+      advantage: "",
+      maxValue: -Infinity,
     };
-    existing.total += value;
-    if (colour) {
-      existing.colours.set(colour, (existing.colours.get(colour) || 0) + value);
-      colourTotals.set(colour, (colourTotals.get(colour) || 0) + value);
+    const nextTotal = existing.total + value;
+    let nextAdvantage = existing.advantage;
+    let nextMaxValue = existing.maxValue;
+    if (advantage && value >= existing.maxValue) {
+      nextAdvantage = advantage;
+      nextMaxValue = value;
     }
-    sellerTotals.set(seller, existing);
+    totals.set(seller, {
+      total: nextTotal,
+      advantage: nextAdvantage,
+      maxValue: nextMaxValue,
+    });
   });
 
-  const sorted = Array.from(sellerTotals.entries()).sort(
+  const sorted = Array.from(totals.entries()).sort(
     (a, b) => b[1].total - a[1].total
   );
-  const maxSellers = sorted.length > 5 ? 5 : sorted.length;
-  const topEntries = sorted.slice(0, maxSellers);
-  const labels = topEntries.map(([label]) => label);
-  const sellerLookup = new Map(topEntries);
-
-  const colours = Array.from(colourTotals.entries())
-    .sort((a, b) => b[1] - a[1])
-    .map(([colour]) => colour);
-
-  const datasets = colours.map((colour, index) => ({
-    label: colour,
-    data: labels.map((seller) => {
-      const sellerData = sellerLookup.get(seller);
-      return sellerData?.colours.get(colour) ?? 0;
-    }),
-    backgroundColor: CHART_PALETTE[index % CHART_PALETTE.length],
-    borderRadius: 6,
-  }));
+  const topEntries = sorted.slice(0, 5);
 
   return {
-    labels,
-    datasets,
-    valueLabel: `${valueColumn} by ${sellerColumn} & ${colourColumn}`,
+    labels: topEntries.map(([label]) => label),
+    values: topEntries.map(([, value]) => value.total),
+    advantages: topEntries.map(([, value]) => value.advantage || "—"),
+    valueLabel: `${valueColumn} by ${sellerColumn}`,
   };
 };
 
@@ -1011,12 +983,20 @@ const renderCharts = (rows) => {
       type: "bar",
       data: {
         labels: comparisonData.labels,
-        datasets: comparisonData.datasets,
+        datasets: [
+          {
+            label: comparisonData.valueLabel || "Totals",
+            data: comparisonData.values,
+            advantages: comparisonData.advantages,
+            backgroundColor: "#0f172a",
+            borderRadius: 8,
+          },
+        ],
       },
       options: {
         responsive: true,
         plugins: {
-          legend: { position: "bottom" },
+          legend: { display: false },
           tooltip: {
             enabled: false,
             external: comparisonTooltipHandler,
@@ -1026,19 +1006,17 @@ const renderCharts = (rows) => {
           x: {
             title: {
               display: true,
-              text: "Seller",
+              text: "Seller Name",
             },
-            stacked: true,
           },
           y: {
             title: {
               display: true,
-              text: "Total ASIN Revenue",
+              text: "ASIN Revenue",
             },
             ticks: {
               callback: (value) => numberFormatter.format(value),
             },
-            stacked: true,
           },
         },
       },
@@ -1061,7 +1039,6 @@ const renderCharts = (rows) => {
       const position = element.element.tooltipPosition();
       comparisonTooltipState.locked = true;
       comparisonTooltipState.dataIndex = element.index;
-      comparisonTooltipState.datasetIndex = element.datasetIndex;
       comparisonTooltipState.position = { x: position.x, y: position.y };
       comparisonChart.setActiveElements([element]);
       comparisonChart.tooltip.setActiveElements([element], position);
@@ -1078,7 +1055,8 @@ const renderCharts = (rows) => {
     });
   } else {
     comparisonChart.data.labels = comparisonData.labels;
-    comparisonChart.data.datasets = comparisonData.datasets;
+    comparisonChart.data.datasets[0].data = comparisonData.values;
+    comparisonChart.data.datasets[0].advantages = comparisonData.advantages;
     comparisonChart.update();
   }
 
