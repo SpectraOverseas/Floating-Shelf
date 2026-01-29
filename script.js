@@ -733,18 +733,12 @@ const buildComparisonData = (rows) => {
     return { labels: [], values: [], valueLabel: "" };
   }
   const columns = Object.keys(rows[0]);
-  const valueColumn = findColumnByKeywords(columns, [
-    "revenue",
-    "price",
-    "sales",
-    "units",
-  ]);
-  const categoryColumn = findColumnByKeywords(columns, [
-    "seller",
-    "design",
-    "colour",
-    "material",
-  ]);
+  const valueColumn = columns.find(
+    (column) => column.toLowerCase() === "asin revenue"
+  );
+  const categoryColumn = columns.find(
+    (column) => column.toLowerCase() === "seller"
+  );
   if (!valueColumn || !categoryColumn) {
     return { labels: [], values: [], valueLabel: "" };
   }
@@ -760,7 +754,7 @@ const buildComparisonData = (rows) => {
   });
 
   const sorted = Array.from(totals.entries()).sort((a, b) => b[1] - a[1]);
-  const topEntries = sorted.slice(0, 8);
+  const topEntries = sorted.slice(0, 10);
 
   return {
     labels: topEntries.map(([label]) => label),
