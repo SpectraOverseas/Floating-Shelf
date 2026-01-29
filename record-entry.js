@@ -219,6 +219,41 @@ const encodeBase64 = (arrayBuffer) => {
   return btoa(binary);
 };
 
+const isRowEmpty = (row) =>
+  !row || row.every((cell) => cleanValue(cell) === "");
+
+const getReindexColumnIndex = (headers) => {
+  const candidates = new Set([
+    "index",
+    "row",
+    "row #",
+    "row no",
+    "row number",
+    "s.no",
+    "s. no",
+    "serial no",
+    "serial number",
+  ]);
+  return headers.findIndex((header) =>
+    candidates.has(cleanValue(header).toLowerCase())
+  );
+};
+
+const compactSheetData = (data, fallbackHeaders) => {
+  const safeHeaders = data[0] || fallbackHeaders;
+  const rows = data.slice(1).filter((row) => !isRowEmpty(row));
+  const reindexColumn = getReindexColumnIndex(safeHeaders);
+  const normalizedRows =
+    reindexColumn >= 0
+      ? rows.map((row, rowIndex) => {
+          const nextRow = [...row];
+          nextRow[reindexColumn] = rowIndex + 1;
+          return nextRow;
+        })
+      : rows;
+  return { headers: safeHeaders, rows: normalizedRows };
+};
+
 const appendRowToSheet = (workbook, headers, rowValues) => {
   const sheet = workbook.Sheets[SHEET_NAME];
   if (!sheet) {
@@ -226,14 +261,18 @@ const appendRowToSheet = (workbook, headers, rowValues) => {
   }
 
   const data = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
-  const safeHeaders = data[0] || headers;
+  const { headers: safeHeaders, rows: compactedRows } = compactSheetData(
+    data,
+    headers
+  );
   const nextRow = safeHeaders.map((header, index) => {
     const value = rowValues[index];
     return value === undefined || value === null ? "" : value;
   });
-  data.push(nextRow);
+  compactedRows.push(nextRow);
+  const normalizedData = [safeHeaders, ...compactedRows];
 
-  const updatedSheet = XLSX.utils.aoa_to_sheet(data);
+  const updatedSheet = XLSX.utils.aoa_to_sheet(normalizedData);
   workbook.Sheets[SHEET_NAME] = updatedSheet;
   return workbook;
 };
