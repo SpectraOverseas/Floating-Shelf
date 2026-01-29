@@ -296,6 +296,15 @@ h1 {
   font-weight: 600;
 }
 
+.chart-card--distribution header {
+  text-align: center;
+}
+
+.chart-card--distribution h3 {
+  margin-top: 6px;
+  color: #0f172a;
+}
+
 .chart-card--comparison header {
   text-align: center;
 }
