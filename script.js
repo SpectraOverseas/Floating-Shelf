@@ -728,43 +728,88 @@ const buildChartCard = (canvas, config) => {
   return new Chart(canvas, config);
 };
 
-const buildTrendData = (rows) => {
+const buildBubbleChartData = (rows) => {
   if (!rows.length) {
-    return { labels: [], values: [] };
+    return { datasets: [] };
   }
   const columns = Object.keys(rows[0]);
-  const dateColumn = findColumnByKeywords(columns, DATE_KEYWORDS);
-  const valueColumn = findColumnByKeywords(columns, [
-    "revenue",
-    "price",
-    "sales",
-    "units",
-  ]);
-  if (!dateColumn || !valueColumn) {
-    return { labels: [], values: [] };
+  const priceColumn =
+    columns.find((column) => column === PRICE_COLUMN_KEY) ||
+    findColumnByKeywords(columns, ["price"]);
+  const revenueColumn = columns.find(
+    (column) => column.toLowerCase() === "asin revenue"
+  );
+  const reviewCountColumn = columns.find(
+    (column) => column.toLowerCase() === "review count"
+  );
+  const asinColumn = columns.find((column) => column.toLowerCase() === "asin");
+  const sellerColumn = columns.find(
+    (column) => column.toLowerCase() === "seller"
+  );
+  const ratingsColumn = columns.find(
+    (column) => column.toLowerCase() === "ratings"
+  );
+  const fulfillmentColumn = columns.find(
+    (column) => column.toLowerCase() === "fulfillment"
+  );
+  const groupColumn =
+    columns.find(
+      (column) => column.toLowerCase() === "seller country/region"
+    ) || fulfillmentColumn;
+
+  if (!priceColumn || !revenueColumn || !reviewCountColumn) {
+    return { datasets: [] };
   }
 
-  const grouped = new Map();
+  const sizes = rows
+    .map((row) => parseNumericValue(row[reviewCountColumn]) ?? 0)
+    .filter((value) => Number.isFinite(value));
+  const minSize = Math.min(...sizes, 0);
+  const maxSize = Math.max(...sizes, 0);
+
+  const sizeRange = maxSize - minSize || 1;
+  const minRadius = 4;
+  const maxRadius = 18;
+
+  const palette = ["#2563eb", "#38bdf8", "#22c55e", "#f97316", "#a855f7", "#facc15"];
+  const groups = new Map();
   rows.forEach((row) => {
-    const dateValue = cleanValue(row[dateColumn]);
-    const parsedDate = parseDateValue(dateValue);
-    if (!dateValue || !parsedDate) {
+    const priceValue = parseNumericValue(row[priceColumn]);
+    const revenueValue = parseNumericValue(row[revenueColumn]);
+    if (priceValue === null || revenueValue === null) {
       return;
     }
-    const label = dateValue;
-    const current = grouped.get(label) || { total: 0, date: parsedDate };
-    const value = parseNumericValue(row[valueColumn]) ?? 0;
-    grouped.set(label, { total: current.total + value, date: parsedDate });
+    const reviewCount = parseNumericValue(row[reviewCountColumn]) ?? 0;
+    const normalized = (reviewCount - minSize) / sizeRange;
+    const radius = minRadius + normalized * (maxRadius - minRadius);
+    const groupLabel = cleanValue(row[groupColumn]) || "Unknown";
+    const point = {
+      x: priceValue,
+      y: revenueValue,
+      r: radius,
+      asin: cleanValue(row[asinColumn]),
+      seller: cleanValue(row[sellerColumn]),
+      price: priceValue,
+      revenue: revenueValue,
+      ratings: cleanValue(row[ratingsColumn]),
+      reviewCount,
+      fulfillment: cleanValue(row[fulfillmentColumn]),
+    };
+    if (!groups.has(groupLabel)) {
+      groups.set(groupLabel, []);
+    }
+    groups.get(groupLabel).push(point);
   });
 
-  const entries = Array.from(grouped.entries()).sort((a, b) => {
-    return a[1].date - b[1].date;
+  const datasets = Array.from(groups.entries()).map(([label, data], index) => {
+    return {
+      label,
+      data,
+      backgroundColor: palette[index % palette.length],
+    };
   });
 
-  return {
-    labels: entries.map(([label]) => label),
-    values: entries.map(([, entry]) => entry.total),
-  };
+  return { datasets };
 };
 
 const buildComparisonData = (rows) => {
@@ -901,36 +946,61 @@ const renderCharts = (rows) => {
     return;
   }
 
-  const trendData = buildTrendData(rows);
+  const bubbleData = buildBubbleChartData(rows);
   const comparisonData = buildComparisonData(rows);
   const distributionData = buildDistributionData(rows);
   const comparisonTooltipDetails = buildComparisonTooltipData(rows);
 
   if (!trendChart) {
     trendChart = buildChartCard(trendChartCanvas, {
-      type: "line",
+      type: "bubble",
       data: {
-        labels: trendData.labels,
-        datasets: [
-          {
-            label: "Trend",
-            data: trendData.values,
-            borderColor: "#2563eb",
-            backgroundColor: "rgba(37, 99, 235, 0.2)",
-            tension: 0.3,
-            fill: true,
-            pointRadius: 3,
-          },
-        ],
+        datasets: bubbleData.datasets,
       },
       options: {
         responsive: true,
         plugins: {
-          legend: { display: false },
-          tooltip: { mode: "index", intersect: false },
+          legend: { position: "bottom" },
+          tooltip: {
+            callbacks: {
+              title: (items) => {
+                const raw = items[0]?.raw || {};
+                return raw.asin ? `ASIN: ${raw.asin}` : "ASIN: N/A";
+              },
+              label: (context) => {
+                const raw = context.raw || {};
+                const currencyFormatter = new Intl.NumberFormat("en-US", {
+                  style: "currency",
+                  currency: "USD",
+                  maximumFractionDigits: 2,
+                });
+                return [
+                  `Seller: ${raw.seller || "N/A"}`,
+                  `Price $: ${currencyFormatter.format(raw.price ?? 0)}`,
+                  `ASIN Revenue: ${currencyFormatter.format(raw.revenue ?? 0)}`,
+                  `Ratings: ${raw.ratings || "N/A"}`,
+                  `Review Count: ${numberFormatter.format(raw.reviewCount ?? 0)}`,
+                  `Fulfillment: ${raw.fulfillment || "N/A"}`,
+                ];
+              },
+            },
+          },
         },
         scales: {
+          x: {
+            title: {
+              display: true,
+              text: "Product Price ($)",
+            },
+            ticks: {
+              callback: (value) => numberFormatter.format(value),
+            },
+          },
           y: {
+            title: {
+              display: true,
+              text: "ASIN Revenue ($)",
+            },
             ticks: {
               callback: (value) => numberFormatter.format(value),
             },
@@ -939,8 +1009,7 @@ const renderCharts = (rows) => {
       },
     });
   } else {
-    trendChart.data.labels = trendData.labels;
-    trendChart.data.datasets[0].data = trendData.values;
+    trendChart.data.datasets = bubbleData.datasets;
     trendChart.update();
   }
 
