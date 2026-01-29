@@ -296,6 +296,41 @@ h1 {
   font-weight: 600;
 }
 
+.chart-tooltip {
+  position: absolute;
+  min-width: 200px;
+  max-width: 260px;
+  background: #0f172a;
+  color: #f8fafc;
+  padding: 12px 14px;
+  border-radius: 12px;
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.24);
+  font-size: 0.85rem;
+  line-height: 1.4;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease-in-out;
+  z-index: 20;
+}
+
+.chart-tooltip__title {
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.chart-tooltip__row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.chart-tooltip__row--stacked {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  margin-top: 8px;
+}
+
 .data-table__header {
   display: flex;
   align-items: center;
