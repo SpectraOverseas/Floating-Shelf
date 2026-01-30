@@ -770,7 +770,7 @@ const buildChartCard = (canvas, config) => {
   return new Chart(canvas, config);
 };
 
-const buildScatterChartData = (rows) => {
+const buildBubbleChartData = (rows) => {
   if (!rows.length) {
     return { datasets: [], xMax: 0, yMax: 0 };
   }
@@ -781,18 +781,36 @@ const buildScatterChartData = (rows) => {
   const revenueColumn = columns.find(
     (column) => column.toLowerCase() === "asin revenue"
   );
+  const reviewCountColumn = columns.find(
+    (column) => column.toLowerCase() === "review count"
+  );
   const asinColumn = columns.find((column) => column.toLowerCase() === "asin");
   const sellerColumn = columns.find(
     (column) => column.toLowerCase() === "seller"
   );
-  const sellerCountryColumn = columns.find(
-    (column) => column.toLowerCase() === "seller country/region"
+  const ratingsColumn = columns.find(
+    (column) => column.toLowerCase() === "ratings"
   );
+  const fulfillmentColumn = columns.find(
+    (column) => column.toLowerCase() === "fulfillment"
+  );
+  const groupColumn =
+    columns.find(
+      (column) => column.toLowerCase() === "seller country/region"
+    ) || fulfillmentColumn;
 
-  if (!priceColumn || !revenueColumn) {
+  if (!priceColumn || !revenueColumn || !reviewCountColumn) {
     return { datasets: [], xMax: 0, yMax: 0 };
   }
 
+  const palette = [
+    "#2563eb",
+    "#38bdf8",
+    "#22c55e",
+    "#f97316",
+    "#a855f7",
+    "#facc15",
+  ];
   const MAX_BUBBLE_POINTS = 80;
   const preparedRows = rows
     .map((row) => {
@@ -801,10 +819,12 @@ const buildScatterChartData = (rows) => {
       if (priceValue === null || revenueValue === null) {
         return null;
       }
+      const reviewCount = parseNumericValue(row[reviewCountColumn]) ?? 0;
       return {
         row,
         priceValue,
         revenueValue,
+        reviewCount,
       };
     })
     .filter(Boolean);
@@ -820,6 +840,15 @@ const buildScatterChartData = (rows) => {
           .slice(0, MAX_BUBBLE_POINTS)
       : preparedRows;
 
+  const reviewSizes = displayRows.map((entry) =>
+    Math.sqrt(Math.max(entry.reviewCount, 0))
+  );
+  const minSize = Math.min(...reviewSizes, 0);
+  const maxSize = Math.max(...reviewSizes, 0);
+  const sizeRange = maxSize - minSize || 1;
+  const minRadius = 5;
+  const maxRadius = 20;
+
   const maxPrice = Math.max(
     ...displayRows.map((entry) => entry.priceValue),
     0
@@ -829,30 +858,12 @@ const buildScatterChartData = (rows) => {
     0
   );
 
-  const countryColorMap = new Map([
-    ["CN", "#2563eb"],
-    ["US", "#22c55e"],
-    ["N/A", "#7dd3c7"],
-  ]);
-
-  const normalizeCountry = (value) => {
-    const cleaned = cleanValue(value);
-    if (!cleaned) {
-      return "N/A";
-    }
-    const upper = cleaned.toUpperCase();
-    if (upper === "CN" || upper.includes("CHINA")) {
-      return "CN";
-    }
-    if (upper === "US" || upper.includes("UNITED STATES")) {
-      return "US";
-    }
-    return cleaned;
-  };
-
   const groups = new Map();
   displayRows.forEach((entry) => {
-    const groupLabel = normalizeCountry(entry.row[sellerCountryColumn]);
+    const normalized =
+      (Math.sqrt(Math.max(entry.reviewCount, 0)) - minSize) / sizeRange;
+    const radius = minRadius + normalized * (maxRadius - minRadius);
+    const groupLabel = cleanValue(entry.row[groupColumn]) || "Unknown";
     const jitterSeed =
       cleanValue(entry.row[asinColumn]) ||
       cleanValue(entry.row[sellerColumn]) ||
@@ -861,11 +872,14 @@ const buildScatterChartData = (rows) => {
     const point = {
       x: jitteredPrice,
       y: entry.revenueValue,
+      r: radius,
       asin: cleanValue(entry.row[asinColumn]),
       seller: cleanValue(entry.row[sellerColumn]),
       price: entry.priceValue,
       revenue: entry.revenueValue,
-      sellerCountry: groupLabel,
+      ratings: cleanValue(entry.row[ratingsColumn]),
+      reviewCount: entry.reviewCount,
+      fulfillment: cleanValue(entry.row[fulfillmentColumn]),
     };
     if (!groups.has(groupLabel)) {
       groups.set(groupLabel, []);
@@ -874,21 +888,20 @@ const buildScatterChartData = (rows) => {
   });
 
   const datasets = Array.from(groups.entries()).map(([label, data], index) => {
-    const color = countryColorMap.get(label) || "#7dd3c7";
+    const color = palette[index % palette.length];
     return {
       label,
       data,
-      backgroundColor: hexToRgba(color, 0.7),
-      borderWidth: 0,
-      pointRadius: 6,
-      pointHoverRadius: 7,
+      backgroundColor: hexToRgba(color, 0.6),
+      borderColor: hexToRgba(color, 0.9),
+      borderWidth: 1,
     };
   });
 
   return {
     datasets,
     xMax: maxPrice + 10,
-    yMax: maxRevenue * 1.1,
+    yMax: maxRevenue * 1.15,
   };
 };
 
@@ -1026,31 +1039,23 @@ const renderCharts = (rows) => {
     return;
   }
 
-  const scatterData = buildScatterChartData(rows);
+  const bubbleData = buildBubbleChartData(rows);
   const comparisonData = buildComparisonData(rows);
   const distributionData = buildDistributionData(rows);
   const comparisonTooltipDetails = buildComparisonTooltipData(rows);
 
   if (!trendChart) {
     trendChart = buildChartCard(trendChartCanvas, {
-      type: "scatter",
+      type: "bubble",
       data: {
-        datasets: scatterData.datasets,
+        datasets: bubbleData.datasets,
       },
       options: {
         responsive: true,
-        maintainAspectRatio: true,
         plugins: {
           legend: {
             position: "bottom",
             align: "center",
-            labels: {
-              boxWidth: 8,
-              boxHeight: 8,
-              font: {
-                size: 11,
-              },
-            },
           },
           tooltip: {
             callbacks: {
@@ -1066,12 +1071,12 @@ const renderCharts = (rows) => {
                   maximumFractionDigits: 2,
                 });
                 return [
-                  `Seller Name: ${raw.seller || "N/A"}`,
-                  `Seller Country: ${raw.sellerCountry || "N/A"}`,
-                  `Product Price ($): ${currencyFormatter.format(raw.price ?? 0)}`,
-                  `ASIN Revenue ($): ${currencyFormatter.format(
-                    raw.revenue ?? 0
-                  )}`,
+                  `Seller: ${raw.seller || "N/A"}`,
+                  `Price $: ${currencyFormatter.format(raw.price ?? 0)}`,
+                  `ASIN Revenue: ${currencyFormatter.format(raw.revenue ?? 0)}`,
+                  `Ratings: ${raw.ratings || "N/A"}`,
+                  `Review Count: ${numberFormatter.format(raw.reviewCount ?? 0)}`,
+                  `Fulfillment: ${raw.fulfillment || "N/A"}`,
                 ];
               },
             },
@@ -1080,49 +1085,37 @@ const renderCharts = (rows) => {
         scales: {
           x: {
             min: 0,
-            max: scatterData.xMax,
+            max: bubbleData.xMax,
             title: {
               display: true,
               text: "Product Price ($)",
             },
-            grace: "5%",
             ticks: {
               callback: (value) => numberFormatter.format(value),
-            },
-            grid: {
-              display: false,
             },
           },
           y: {
             type: "logarithmic",
-            min: 10,
-            max: scatterData.yMax,
+            min: 1,
+            max: bubbleData.yMax,
             title: {
               display: true,
-              text: "ASIN Revenue ($)",
+              text: "ASIN Revenue (Log Scale)",
             },
             ticks: {
               callback: (value) => numberFormatter.format(value),
-            },
-            afterBuildTicks: (scale) => {
-              scale.ticks = [10, 100, 1000, 10000].map((value) => ({
-                value,
-              }));
-            },
-            grid: {
-              color: "rgba(148, 163, 184, 0.35)",
             },
           },
         },
       },
     });
   } else {
-    trendChart.data.datasets = scatterData.datasets;
+    trendChart.data.datasets = bubbleData.datasets;
     trendChart.options.scales.x.min = 0;
-    trendChart.options.scales.x.max = scatterData.xMax;
+    trendChart.options.scales.x.max = bubbleData.xMax;
     trendChart.options.scales.y.type = "logarithmic";
-    trendChart.options.scales.y.min = 10;
-    trendChart.options.scales.y.max = scatterData.yMax;
+    trendChart.options.scales.y.min = 1;
+    trendChart.options.scales.y.max = bubbleData.yMax;
     trendChart.update();
   }
 
