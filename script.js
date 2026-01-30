@@ -889,7 +889,7 @@ const buildBubbleChartData = (rows) => {
   return {
     datasets,
     xMax: maxPrice + 10,
-    yMax: 12000,
+    yMax: maxRevenue * 1.50,
   };
 };
 
