@@ -794,12 +794,11 @@ const buildBubbleChartData = (rows) => {
   const fulfillmentColumn = columns.find(
     (column) => column.toLowerCase() === "fulfillment"
   );
-  const groupColumn =
-    columns.find(
-      (column) => column.toLowerCase() === "seller country/region"
-    ) || fulfillmentColumn;
+  const groupColumn = columns.find(
+    (column) => column.toLowerCase() === "seller country/region"
+  );
 
-  if (!priceColumn || !revenueColumn || !reviewCountColumn) {
+  if (!priceColumn || !revenueColumn) {
     return { datasets: [], xMax: 0, yMax: 0 };
   }
 
@@ -819,12 +818,13 @@ const buildBubbleChartData = (rows) => {
       if (priceValue === null || revenueValue === null) {
         return null;
       }
-      const reviewCount = parseNumericValue(row[reviewCountColumn]) ?? 0;
       return {
         row,
         priceValue,
         revenueValue,
-        reviewCount,
+        reviewCount: reviewCountColumn
+          ? parseNumericValue(row[reviewCountColumn]) ?? 0
+          : 0,
       };
     })
     .filter(Boolean);
@@ -840,15 +840,6 @@ const buildBubbleChartData = (rows) => {
           .slice(0, MAX_BUBBLE_POINTS)
       : preparedRows;
 
-  const reviewSizes = displayRows.map((entry) =>
-    Math.sqrt(Math.max(entry.reviewCount, 0))
-  );
-  const minSize = Math.min(...reviewSizes, 0);
-  const maxSize = Math.max(...reviewSizes, 0);
-  const sizeRange = maxSize - minSize || 1;
-  const minRadius = 5;
-  const maxRadius = 20;
-
   const maxPrice = Math.max(
     ...displayRows.map((entry) => entry.priceValue),
     0
@@ -860,9 +851,6 @@ const buildBubbleChartData = (rows) => {
 
   const groups = new Map();
   displayRows.forEach((entry) => {
-    const normalized =
-      (Math.sqrt(Math.max(entry.reviewCount, 0)) - minSize) / sizeRange;
-    const radius = minRadius + normalized * (maxRadius - minRadius);
     const groupLabel = cleanValue(entry.row[groupColumn]) || "Unknown";
     const jitterSeed =
       cleanValue(entry.row[asinColumn]) ||
@@ -872,7 +860,6 @@ const buildBubbleChartData = (rows) => {
     const point = {
       x: jitteredPrice,
       y: entry.revenueValue,
-      r: radius,
       asin: cleanValue(entry.row[asinColumn]),
       seller: cleanValue(entry.row[sellerColumn]),
       price: entry.priceValue,
@@ -892,9 +879,10 @@ const buildBubbleChartData = (rows) => {
     return {
       label,
       data,
-      backgroundColor: hexToRgba(color, 0.6),
-      borderColor: hexToRgba(color, 0.9),
+      backgroundColor: hexToRgba(color, 0.65),
+      borderColor: hexToRgba(color, 0.7),
       borderWidth: 1,
+      pointRadius: 6,
     };
   });
 
@@ -1046,7 +1034,7 @@ const renderCharts = (rows) => {
 
   if (!trendChart) {
     trendChart = buildChartCard(trendChartCanvas, {
-      type: "bubble",
+      type: "scatter",
       data: {
         datasets: bubbleData.datasets,
       },
