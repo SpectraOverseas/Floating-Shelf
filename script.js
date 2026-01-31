@@ -1040,23 +1040,10 @@ const renderCharts = (rows) => {
       },
       options: {
         responsive: true,
-        maintainAspectRatio: false,
-        layout: {
-          padding: {
-            top: 8,
-            right: 12,
-            bottom: 8,
-            left: 12,
-          },
-        },
         plugins: {
           legend: {
             position: "bottom",
             align: "center",
-            labels: {
-              boxWidth: 10,
-              padding: 12,
-            },
           },
           tooltip: {
             callbacks: {
@@ -1090,11 +1077,9 @@ const renderCharts = (rows) => {
             title: {
               display: true,
               text: "Product Price ($)",
-              padding: { top: 6, bottom: 6 },
             },
             ticks: {
               callback: (value) => numberFormatter.format(value),
-              padding: 4,
             },
           },
           y: {
@@ -1104,11 +1089,9 @@ const renderCharts = (rows) => {
             title: {
               display: true,
               text: "ASIN Revenue (Log Scale)",
-              padding: { top: 6, bottom: 6 },
             },
             ticks: {
               callback: (value) => numberFormatter.format(value),
-              padding: 4,
             },
           },
         },
@@ -1140,15 +1123,6 @@ const renderCharts = (rows) => {
       },
       options: {
         responsive: true,
-        maintainAspectRatio: false,
-        layout: {
-          padding: {
-            top: 8,
-            right: 12,
-            bottom: 8,
-            left: 12,
-          },
-        },
         plugins: {
           legend: { display: false },
           tooltip: {
@@ -1175,15 +1149,9 @@ const renderCharts = (rows) => {
           },
         },
         scales: {
-          x: {
-            ticks: {
-              padding: 4,
-            },
-          },
           y: {
             ticks: {
               callback: (value) => numberFormatter.format(value),
-              padding: 4,
             },
           },
         },
@@ -1219,23 +1187,8 @@ const renderCharts = (rows) => {
       },
       options: {
         responsive: true,
-        maintainAspectRatio: false,
-        layout: {
-          padding: {
-            top: 6,
-            right: 10,
-            bottom: 6,
-            left: 10,
-          },
-        },
         plugins: {
-          legend: {
-            position: "bottom",
-            labels: {
-              boxWidth: 10,
-              padding: 12,
-            },
-          },
+          legend: { position: "bottom" },
         },
       },
     });
