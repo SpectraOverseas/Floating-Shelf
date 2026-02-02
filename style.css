@@ -294,6 +294,27 @@ h1 {
   min-height: 400px;
 }
 
+.chart-card canvas {
+  display: block;
+  width: 100%;
+}
+
+.chart-card--full {
+  padding: 0;
+  gap: 0;
+}
+
+.chart-card--full header {
+  padding: 20px 20px 12px;
+}
+
+.chart-card--full canvas {
+  flex: 1 1 auto;
+  height: 100% !important;
+  margin: 0;
+  padding: 0;
+}
+
 .chart-card h3 {
   font-size: 1.1rem;
   font-weight: 600;
