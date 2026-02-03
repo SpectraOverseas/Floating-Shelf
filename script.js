@@ -56,6 +56,9 @@ const activeFilters = {};
 const numberFormatter = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 2,
 });
+const kpiNumberFormatter = new Intl.NumberFormat("en-US", {
+  maximumFractionDigits: 0,
+});
 
 const hexToRgba = (hex, alpha) => {
   if (!hex) {
@@ -619,7 +622,7 @@ const renderKpis = (rows) => {
       return;
     }
     const value = values[kpi.key] ?? 0;
-    element.textContent = numberFormatter.format(value);
+    element.textContent = kpiNumberFormatter.format(Math.round(value));
   });
 };
 
