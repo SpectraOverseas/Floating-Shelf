@@ -12,11 +12,36 @@ const FILTER_COLUMNS = [
 ];
 
 const KPI_CONFIG = [
-  { key: "asins", column: "ASIN", type: "unique" },
-  { key: "colours", column: "Colour", type: "unique" },
-  { key: "asinRevenue", column: "ASIN Revenue", type: "sum" },
-  { key: "sellerCountries", column: "Seller Country/Region", type: "unique" },
-  { key: "sellers", column: "Seller", type: "unique" },
+  {
+    key: "asins",
+    column: "ASIN",
+    type: "unique",
+    formatter: (value) => integerFormatter.format(value),
+  },
+  {
+    key: "colours",
+    column: "Colour",
+    type: "unique",
+    formatter: (value) => integerFormatter.format(value),
+  },
+  {
+    key: "asinRevenue",
+    column: "ASIN Revenue",
+    type: "sum",
+    formatter: (value) => currencyFormatter.format(value),
+  },
+  {
+    key: "sellerCountries",
+    column: "Seller Country/Region",
+    type: "unique",
+    formatter: (value) => integerFormatter.format(value),
+  },
+  {
+    key: "sellers",
+    column: "Seller",
+    type: "unique",
+    formatter: (value) => integerFormatter.format(value),
+  },
 ];
 
 const PRICE_COLUMN_KEY = "Price  $";
@@ -53,10 +78,18 @@ let rawData = [];
 let lastDataSignature = "";
 const activeFilters = {};
 
-const numberFormatter = new Intl.NumberFormat("en-US", {
+const integerFormatter = new Intl.NumberFormat("en-US", {
+  maximumFractionDigits: 0,
+});
+const currencyFormatter = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+  minimumFractionDigits: 2,
   maximumFractionDigits: 2,
 });
-const kpiNumberFormatter = new Intl.NumberFormat("en-US", {
+const currencyAxisFormatter = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
   maximumFractionDigits: 0,
 });
 
@@ -452,24 +485,55 @@ const parseNumericValue = (value) => {
   return Number.isFinite(parsed) ? parsed : null;
 };
 
+const formatIntegerValue = (value) => {
+  const parsed = parseNumericValue(value);
+  if (parsed === null) {
+    return cleanValue(value);
+  }
+  return integerFormatter.format(Math.round(parsed));
+};
+
 const formatPriceValue = (value) => {
   const parsed = parseNumericValue(value);
   if (parsed === null) {
     return cleanValue(value);
   }
-  return numberFormatter.format(parsed);
+  return currencyFormatter.format(parsed);
+};
+
+const formatCurrencyValue = (value) => {
+  const parsed = parseNumericValue(value);
+  if (parsed === null) {
+    return cleanValue(value);
+  }
+  return currencyFormatter.format(parsed);
 };
 
 const TABLE_COLUMNS = [
   { label: "Design", key: "Design" },
   { label: "Seller", key: "Seller" },
   { label: "ASIN", key: "ASIN" },
-  { label: "Pack", key: "Pack" },
+  {
+    label: "Pack",
+    key: "Pack",
+    formatter: formatIntegerValue,
+    isNumeric: true,
+  },
   { label: "L X W X H", key: "L X W X H" },
   { label: "Colour", key: "Colour" },
   { label: "Advantage", key: "Advantage" },
-  { label: "Price $", key: PRICE_COLUMN_KEY, formatter: formatPriceValue },
-  { label: "ASIN Revenue", key: "ASIN Revenue" },
+  {
+    label: "Price $",
+    key: PRICE_COLUMN_KEY,
+    formatter: formatPriceValue,
+    isNumeric: true,
+  },
+  {
+    label: "ASIN Revenue",
+    key: "ASIN Revenue",
+    formatter: formatCurrencyValue,
+    isNumeric: true,
+  },
 ];
 
 const uniqueValues = (rows, column) => {
@@ -622,7 +686,10 @@ const renderKpis = (rows) => {
       return;
     }
     const value = values[kpi.key] ?? 0;
-    element.textContent = kpiNumberFormatter.format(Math.round(value));
+    const formattedValue = kpi.formatter
+      ? kpi.formatter(value)
+      : integerFormatter.format(Math.round(value));
+    element.textContent = formattedValue;
   });
 };
 
@@ -641,6 +708,9 @@ const renderTable = (rows) => {
       td.textContent = column.formatter
         ? column.formatter(rawValue)
         : cleanValue(rawValue);
+      if (column.isNumeric) {
+        td.classList.add("data-table__cell--number");
+      }
       tr.appendChild(td);
     });
     fragment.appendChild(tr);
@@ -1056,17 +1126,12 @@ const renderCharts = (rows) => {
               },
               label: (context) => {
                 const raw = context.raw || {};
-                const currencyFormatter = new Intl.NumberFormat("en-US", {
-                  style: "currency",
-                  currency: "USD",
-                  maximumFractionDigits: 2,
-                });
                 return [
                   `Seller: ${raw.seller || "N/A"}`,
                   `Price $: ${currencyFormatter.format(raw.price ?? 0)}`,
                   `ASIN Revenue: ${currencyFormatter.format(raw.revenue ?? 0)}`,
                   `Ratings: ${raw.ratings || "N/A"}`,
-                  `Review Count: ${numberFormatter.format(raw.reviewCount ?? 0)}`,
+                  `Review Count: ${integerFormatter.format(raw.reviewCount ?? 0)}`,
                   `Fulfillment: ${raw.fulfillment || "N/A"}`,
                 ];
               },
@@ -1082,7 +1147,8 @@ const renderCharts = (rows) => {
               text: "Product Price ($)",
             },
             ticks: {
-              callback: (value) => numberFormatter.format(value),
+              align: "end",
+              callback: (value) => currencyAxisFormatter.format(value),
             },
           },
           y: {
@@ -1094,7 +1160,8 @@ const renderCharts = (rows) => {
               text: "ASIN Revenue (Log Scale)",
             },
             ticks: {
-              callback: (value) => numberFormatter.format(value),
+              align: "end",
+              callback: (value) => currencyAxisFormatter.format(value),
             },
           },
         },
@@ -1137,14 +1204,9 @@ const renderCharts = (rows) => {
                 const entry = details ? details.get(seller) : null;
                 const revenue = entry ? entry.total : context.parsed.y ?? 0;
                 const advantage = resolveAdvantageValue(entry);
-                const formattedRevenue = new Intl.NumberFormat("en-US", {
-                  style: "currency",
-                  currency: "USD",
-                  maximumFractionDigits: 2,
-                }).format(revenue ?? 0);
                 return [
                   `Seller: ${seller || "N/A"}`,
-                  `ASIN Revenue: ${formattedRevenue}`,
+                  `ASIN Revenue: ${currencyFormatter.format(revenue ?? 0)}`,
                   `Advantage: ${advantage || "N/A"}`,
                 ];
               },
@@ -1154,7 +1216,8 @@ const renderCharts = (rows) => {
         scales: {
           y: {
             ticks: {
-              callback: (value) => numberFormatter.format(value),
+              align: "end",
+              callback: (value) => currencyAxisFormatter.format(value),
             },
           },
         },
@@ -1192,6 +1255,15 @@ const renderCharts = (rows) => {
         responsive: true,
         plugins: {
           legend: { position: "bottom" },
+          tooltip: {
+            callbacks: {
+              label: (context) => {
+                const label = context.label || "N/A";
+                const value = integerFormatter.format(context.parsed ?? 0);
+                return `${label}: ${value}`;
+              },
+            },
+          },
         },
       },
     });
