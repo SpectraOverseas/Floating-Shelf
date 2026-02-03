@@ -56,6 +56,16 @@ const activeFilters = {};
 const numberFormatter = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 2,
 });
+const currencyFormatter = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+const integerFormatter = new Intl.NumberFormat("en-US", {
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 0,
+});
 const kpiNumberFormatter = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 0,
 });
@@ -452,25 +462,56 @@ const parseNumericValue = (value) => {
   return Number.isFinite(parsed) ? parsed : null;
 };
 
-const formatPriceValue = (value) => {
+const formatCurrencyValue = (value) => {
   const parsed = parseNumericValue(value);
   if (parsed === null) {
     return cleanValue(value);
   }
-  return numberFormatter.format(parsed);
+  return currencyFormatter.format(parsed);
+};
+
+const formatIntegerValue = (value) => {
+  const parsed = parseNumericValue(value);
+  if (parsed === null) {
+    return cleanValue(value);
+  }
+  return integerFormatter.format(parsed);
 };
 
 const TABLE_COLUMNS = [
   { label: "Design", key: "Design" },
   { label: "Seller", key: "Seller" },
   { label: "ASIN", key: "ASIN" },
-  { label: "Pack", key: "Pack" },
+  { label: "Pack", key: "Pack", formatter: formatIntegerValue, isNumeric: true },
   { label: "L X W X H", key: "L X W X H" },
   { label: "Colour", key: "Colour" },
   { label: "Advantage", key: "Advantage" },
-  { label: "Price $", key: PRICE_COLUMN_KEY, formatter: formatPriceValue },
-  { label: "ASIN Revenue", key: "ASIN Revenue" },
+  {
+    label: "Price $",
+    key: PRICE_COLUMN_KEY,
+    formatter: formatCurrencyValue,
+    isNumeric: true,
+  },
+  {
+    label: "ASIN Revenue",
+    key: "ASIN Revenue",
+    formatter: formatCurrencyValue,
+    isNumeric: true,
+  },
 ];
+
+const applyNumericAlignment = () => {
+  const headerCells = document.querySelectorAll(".data-table thead th");
+  TABLE_COLUMNS.forEach((column, index) => {
+    if (!column.isNumeric) {
+      return;
+    }
+    const cell = headerCells[index];
+    if (cell) {
+      cell.classList.add("data-table__cell--numeric");
+    }
+  });
+};
 
 const uniqueValues = (rows, column) => {
   const values = new Set();
@@ -641,6 +682,9 @@ const renderTable = (rows) => {
       td.textContent = column.formatter
         ? column.formatter(rawValue)
         : cleanValue(rawValue);
+      if (column.isNumeric) {
+        td.classList.add("data-table__cell--numeric");
+      }
       tr.appendChild(td);
     });
     fragment.appendChild(tr);
@@ -1305,6 +1349,7 @@ const init = async () => {
   lastDataSignature = getDataSignature(rawData);
   updateFilters(rawData);
   attachFilterListeners();
+  applyNumericAlignment();
   resetButton.addEventListener("click", resetFilters);
   if (showRecordViewButton) {
     showRecordViewButton.addEventListener("click", () => {

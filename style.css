@@ -367,6 +367,11 @@ h1 {
   text-overflow: ellipsis;
 }
 
+.data-table__cell--numeric {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
 .data-table tbody tr:last-child td {
   border-bottom: none;
 }
