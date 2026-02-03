@@ -252,8 +252,6 @@ h1 {
   font-size: 1.8rem;
   font-weight: 600;
   color: #0f172a;
-  text-align: right;
-  font-variant-numeric: tabular-nums;
 }
 
 .data-table {
@@ -358,11 +356,6 @@ h1 {
   padding: 12px 14px;
   border-bottom: 1px solid #e2e8f0;
   z-index: 1;
-}
-
-.data-table__cell--number {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
 }
 
 .data-table tbody td {
