@@ -1043,6 +1043,7 @@ const renderCharts = (rows) => {
       },
       options: {
         responsive: true,
+        maintainAspectRatio: false,
         plugins: {
           legend: {
             position: "bottom",
@@ -1126,6 +1127,7 @@ const renderCharts = (rows) => {
       },
       options: {
         responsive: true,
+        maintainAspectRatio: false,
         plugins: {
           legend: { display: false },
           tooltip: {
@@ -1190,6 +1192,7 @@ const renderCharts = (rows) => {
       },
       options: {
         responsive: true,
+        maintainAspectRatio: false,
         plugins: {
           legend: { position: "bottom" },
         },
