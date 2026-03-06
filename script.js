@@ -773,6 +773,35 @@ const buildChartCard = (canvas, config) => {
   return new Chart(canvas, config);
 };
 
+const roundUpToPowerOfTen = (value) => {
+  if (!Number.isFinite(value) || value <= 1) {
+    return 1;
+  }
+  return 10 ** Math.ceil(Math.log10(value));
+};
+
+const isPowerOfTen = (value) => {
+  if (!Number.isFinite(value) || value <= 0) {
+    return false;
+  }
+  const exponent = Math.log10(value);
+  return Math.abs(exponent - Math.round(exponent)) < 1e-10;
+};
+
+const formatLogTick = (value) => {
+  if (!isPowerOfTen(value)) {
+    return "";
+  }
+  return Number(value).toLocaleString("en-US");
+};
+
+const keepOnlyPowerOfTenTicks = (scale) => {
+  if (!Array.isArray(scale.ticks)) {
+    return;
+  }
+  scale.ticks = scale.ticks.filter((tick) => isPowerOfTen(tick.value));
+};
+
 const buildBubbleChartData = (rows) => {
   if (!rows.length) {
     return { datasets: [], xMax: 0, yMax: 0 };
@@ -898,7 +927,7 @@ const buildBubbleChartData = (rows) => {
     datasets,
     xMax: xAxisMax,
     xTickStepSize: xAxisStepSize,
-    yMax: maxRevenue * 1.50,
+    yMax: roundUpToPowerOfTen(maxRevenue),
   };
 };
 
@@ -1098,12 +1127,13 @@ const renderCharts = (rows) => {
             type: "logarithmic",
             min: 1,
             max: bubbleData.yMax,
+            afterBuildTicks: keepOnlyPowerOfTenTicks,
             title: {
               display: true,
               text: "ASIN Revenue (Log Scale)",
             },
             ticks: {
-              callback: (value) => numberFormatter.format(value),
+              callback: formatLogTick,
             },
           },
         },
@@ -1118,6 +1148,8 @@ const renderCharts = (rows) => {
     trendChart.options.scales.y.type = "logarithmic";
     trendChart.options.scales.y.min = 1;
     trendChart.options.scales.y.max = bubbleData.yMax;
+    trendChart.options.scales.y.afterBuildTicks = keepOnlyPowerOfTenTicks;
+    trendChart.options.scales.y.ticks.callback = formatLogTick;
     trendChart.update();
   }
 
