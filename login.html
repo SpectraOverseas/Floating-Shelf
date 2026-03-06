@@ -7,7 +7,7 @@
   <style>
     :root {
       color-scheme: light;
-      font-family: "Inter", "Segoe UI", Roboto, sans-serif;
+      font-family: "Inter", Arial, sans-serif;
     }
 
     * {
@@ -20,16 +20,17 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      background: linear-gradient(135deg, #4f46e5, #6366f1);
+      background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
       color: #0f172a;
+      padding: 1.5rem;
     }
 
     .login-card {
       width: min(360px, 92vw);
       background: #ffffff;
-      border-radius: 16px;
+      border-radius: 14px;
       padding: 40px;
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
     }
 
     h1 {
@@ -42,13 +43,13 @@
     .subtitle {
       margin: 0.5rem 0 1.5rem;
       color: #64748b;
-      font-size: 0.95rem;
+      font-size: 14px;
     }
 
     .field {
       display: grid;
       gap: 0.4rem;
-      margin-bottom: 1rem;
+      margin-bottom: 1.1rem;
     }
 
     label {
@@ -62,8 +63,8 @@
       height: 44px;
       border: 1px solid #e2e8f0;
       border-radius: 8px;
-      padding: 0 0.8rem;
-      font-size: 0.95rem;
+      padding: 10px;
+      font-size: 14px;
       outline: none;
       transition: border-color 0.2s ease, box-shadow 0.2s ease;
     }
@@ -80,23 +81,24 @@
       background: linear-gradient(135deg, #6366f1, #4f46e5);
       color: #fff;
       height: 44px;
-      font-size: 0.95rem;
+      font-size: 14px;
       font-weight: 600;
       cursor: pointer;
-      margin-top: 0.5rem;
+      margin-top: 0.6rem;
       transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
 
     button:hover {
+      background: linear-gradient(135deg, #5b5ee8, #4338ca);
       transform: translateY(-1px);
-      box-shadow: 0 6px 14px rgba(0, 0, 0, 0.15);
+      box-shadow: 0 8px 18px rgba(79, 70, 229, 0.32);
     }
 
     .error {
       min-height: 1.2rem;
       margin-top: 0.85rem;
-      color: #dc2626;
-      font-size: 0.85rem;
+      color: #ef4444;
+      font-size: 13px;
     }
   </style>
   <script src="auth.js"></script>
