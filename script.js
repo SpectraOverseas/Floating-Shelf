@@ -851,6 +851,11 @@ const buildBubbleChartData = (rows) => {
     ...displayRows.map((entry) => entry.revenueValue),
     0
   );
+  const xAxisStepSize = 10;
+  const xAxisMax = Math.max(
+    xAxisStepSize,
+    Math.ceil((maxPrice + xAxisStepSize) / xAxisStepSize) * xAxisStepSize
+  );
 
   const groups = new Map();
   displayRows.forEach((entry) => {
@@ -891,7 +896,8 @@ const buildBubbleChartData = (rows) => {
 
   return {
     datasets,
-    xMax: maxPrice + 10,
+    xMax: xAxisMax,
+    xTickStepSize: xAxisStepSize,
     yMax: maxRevenue * 1.50,
   };
 };
@@ -1076,6 +1082,7 @@ const renderCharts = (rows) => {
         },
         scales: {
           x: {
+            type: "linear",
             min: 0,
             max: bubbleData.xMax,
             title: {
@@ -1083,6 +1090,7 @@ const renderCharts = (rows) => {
               text: "Product Price ($)",
             },
             ticks: {
+              stepSize: bubbleData.xTickStepSize || 10,
               callback: (value) => numberFormatter.format(value),
             },
           },
@@ -1103,8 +1111,10 @@ const renderCharts = (rows) => {
     });
   } else {
     trendChart.data.datasets = bubbleData.datasets;
+    trendChart.options.scales.x.type = "linear";
     trendChart.options.scales.x.min = 0;
     trendChart.options.scales.x.max = bubbleData.xMax;
+    trendChart.options.scales.x.ticks.stepSize = bubbleData.xTickStepSize || 10;
     trendChart.options.scales.y.type = "logarithmic";
     trendChart.options.scales.y.min = 1;
     trendChart.options.scales.y.max = bubbleData.yMax;
