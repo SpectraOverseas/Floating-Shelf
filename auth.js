@@ -42,7 +42,7 @@ async function login() {
       return;
     }
 
-    localStorage.setItem('auth', 'true');
+    sessionStorage.setItem('auth', 'true');
     window.location.href = 'index.html';
   } catch (error) {
     if (errorMessage) {
@@ -52,12 +52,18 @@ async function login() {
 }
 
 function checkAuth() {
-  if (localStorage.getItem('auth') !== 'true') {
+  if (sessionStorage.getItem('auth') !== 'true') {
     window.location.href = 'login.html';
   }
 }
 
+function checkLoginAuth() {
+  if (sessionStorage.getItem('auth') === 'true') {
+    window.location.href = 'index.html';
+  }
+}
+
 function logout() {
-  localStorage.removeItem('auth');
+  sessionStorage.removeItem('auth');
   window.location.href = 'login.html';
 }
